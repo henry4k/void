@@ -1,0 +1,56 @@
+Dungeon Projekt
+
+
+Log
+Math (vec[2,3,4][i,f]) (mat[3x3,4x4])
+
+Image
+Texture2d
+
+Mesh
+Model
+
+Shader
+
+Sprite
+
+ResourceManager
+
+Window
+
+Network
+Client
+Server
+
+ObjectManager
+
+Map
+MapChunk
+
+
+
+
+----
+
+void ResourceFreeFn( void* data );
+bool ResourceLoadFn( void* data, const char* file );
+
+struct ResourceType
+{
+	ReleaseFn* releaseFn;
+	LoadFn* loadFn;
+};
+
+struct Resource
+{
+	void* data;
+	char path[MAX_PATH];
+	int references;
+	ReleaseFn* releaseFn;
+	UpdateFn* updateFn;
+};
+
+void RegisterResourceType( int type,  )
+void AddResource( int type, Resource* res );
+void ReleaseResource( Resource* res );
+

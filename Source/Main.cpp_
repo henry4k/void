@@ -1,0 +1,169 @@
+#include "Common.hpp"
+#include "Window.hpp"
+#include "Shader.hpp"
+#include "Texture.hpp"
+#include "Model.hpp"
+
+Handle   SkyboxShader;
+Model    SkyboxModel;
+
+Texture  EnvironmentMap;
+
+Handle   SwordShader;
+Model    SwordModel;
+Texture  SwordTextures[3];
+Material SwordMaterial;
+
+void OnKeyAction( int key, int action )
+{
+	// ...
+}
+
+void OnMouseMove()
+{
+	// ...
+}
+
+void UpdateCamera()
+{
+	glMatrixMode(GL_PROJECTION);
+		glLoadIdentity();
+		gluPerspective(90, WindowAspect(), 0.01, 40);
+		gluLookAt(
+			0, 0, 0,
+			0, 0, -1,
+			0, 1, 0
+		);
+	glMatrixMode(GL_MODELVIEW);
+}
+
+void OnResize()
+{
+	glViewport(0, 0, WindowWidth(), WindowHeight());
+}
+
+void OnRender()
+{
+	glClear(GL_DEPTH_BUFFER_BIT);
+	
+	UpdateCamera();
+	glLoadIdentity();
+	
+	glDepthMask(false);
+	glPushMatrix();
+	glScalef(25,25,25);
+	BindShader(SkyboxShader);
+	DrawModel(&SkyboxModel);
+	glPopMatrix();
+	glDepthMask(true);
+	
+	{
+		glPushMatrix();
+		
+                glTranslatef(0,0,-7);
+                glRotatef(30, 0, 0, 1);
+                glRotatef(Time()*40, 1, 0, 0);
+                glTranslatef(-5,0,0);
+		
+		BindMaterial(&SwordMaterial);
+		DrawModel(&SwordModel);
+		
+		glPopMatrix();
+	}
+	
+	CheckGl();
+}
+
+bool Initialize()
+{
+	if(!CreateWindow("Sword", OnResize, OnRender, OnKeyAction, OnMouseMove))
+		return false;
+	
+	glClearDepth(1);
+	glDepthFunc(GL_LEQUAL);
+	glEnable(GL_DEPTH_TEST);
+	glEnable(GL_CULL_FACE);
+	
+	int texOptions = TEX_FILTER|TEX_MIPMAP;
+	
+	// Setup sword
+	{
+		SwordShader = LoadShader("Sword.vert", "Sword.frag");
+		if(!SwordShader)
+			return false;
+		
+		// Sword shader setup
+		{
+			SetUniform(SwordShader, "AlbedoMap",   0);
+			SetUniform(SwordShader, "NormalMap",   1);
+			SetUniform(SwordShader, "SpecularMap", 2);
+			SetUniform(SwordShader, "EnvironmentMap", 3);
+			
+			float position[3] = { 1, 10, 3 };
+			SetUniform(SwordShader, "Lights[0].position", 3, position);
+			
+			float ambient[3] = { 0.5, 0.5, 0.5 };
+			SetUniform(SwordShader, "Lights[0].ambient", 3, ambient);
+			
+			float diffuse[3] = { 0.5, 0.5, 0.5 };
+			SetUniform(SwordShader, "Lights[0].diffuse", 3, diffuse);
+			
+			float specular[3] = { 0.8, 0.8, 0.8 };
+			SetUniform(SwordShader, "Lights[0].specular", 3, specular);
+			
+			SetUniform(SwordShader, "Lights[0].specularExponent", 0.2f);
+			SetUniform(SwordShader, "Lights[0].radius", 100.0f);
+		}
+		
+		if(!LoadTexture2d(&SwordTextures[0], texOptions, "SwordAlbedo.png"))
+			return false;
+		if(!LoadTexture2d(&SwordTextures[1], texOptions, "SwordNormal.png"))
+			return false;
+		if(!LoadTexture2d(&SwordTextures[2], texOptions, "SwordSpecular.png"))
+			return false;
+		
+		SwordMaterial.shader = SwordShader;
+		SwordMaterial.textureCount = 3;
+		SwordMaterial.textures = SwordTextures;
+		
+		if(!LoadModel(&SwordModel, "Sword.ply"))
+			return false;
+	}
+	
+	// Setup skybox
+	{
+		SkyboxShader = LoadShader("Skybox.vert", "Skybox.frag");
+		if(!SkyboxShader)
+			return false;
+		SetUniform(SkyboxShader, "Texture", 3);
+		
+		if(!LoadTextureCube(&EnvironmentMap, texOptions, "CubeMaps/FishPond/", ".png"))
+			return false;
+		BindTexture(&EnvironmentMap, 3);
+		
+		if(!LoadModel(&SkyboxModel, "Skybox.ply"))
+			return false;
+	}
+	
+	CheckGl();
+	return true;
+}
+
+void Terminate()
+{
+	FreeModel(&SkyboxModel);
+	FreeShader(SkyboxShader);
+	
+	FreeModel(&SwordModel);
+	FreeShader(SwordShader);
+	
+	FreeWindow();
+}
+
+int main( int argc, char* argv[] )
+{
+	if(Initialize())
+		RunGameLoop();
+	Terminate();
+	return 0; 
+}
