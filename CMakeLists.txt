@@ -2,29 +2,9 @@ CMAKE_MINIMUM_REQUIRED(VERSION 2.6)
 SET(CMAKE_ALLOW_LOOSE_LOOP_CONSTRUCTS TRUE)
 
 
-PROJECT("Dungeon" CXX C)
+LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/CMake")
 
-SET(RootDir "${CMAKE_SOURCE_DIR}") # This is the root directory
-SET(SourceDir "${RootDir}/Source") # Where the source tree is
-SET(CMakeDir "${RootDir}/CMake") # Additional cmake tools go here
-LIST(APPEND CMAKE_MODULE_PATH ${CMakeDir})
-
-SET(CMAKE_BUILD_TYPE Debug)
-
-
-OPTION(KJ_BUILD_SHARED_MODULES "When enabled the modules are built shared." ON)
-IF(KJ_BUILD_SHARED_MODULES)
-	SET(BUILD_SHARED_LIBS TRUE)
-ENDIF()
-
-SET(KJ_RESOURCE_PATH "${TargetDir}" CACHE PATH "Were the resource tree is.")
-OPTION(KJ_BUNDLED "When enabled the binaries go with the resource tree." ON)
-IF(KJ_BUNDLED)
-	SET(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${KJ_RESOURCE_PATH})
-	SET(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${KJ_RESOURCE_PATH})
-	SET(CMAKE_SHARED_LIBRARY_PREFIX "")
-ENDIF()
-
+# Set compiler warnings
 IF(MSVC)
 	# Force to always compile with W4
 	IF(CMAKE_CXX_FLAGS MATCHES "/W[0-4]")
@@ -49,4 +29,10 @@ MACRO(RequirePackage Package)
 ENDMACRO()
 
 
-ADD_SUBDIRECTORY("Source")
+PROJECT("Dungeon" C CXX)
+
+SET(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/Release")
+SET(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/Release")
+
+INCLUDE_DIRECTORIES("${CMAKE_SOURCE_DIR}/Source")
+ADD_SUBDIRECTORY("Source/kj")

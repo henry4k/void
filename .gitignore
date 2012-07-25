@@ -1,0 +1,28 @@
+$ cat .gitignore
+
+#### Project files
+*.kdev4
+#/Source/nsq/Config.hpp.in
+
+#### CMake files
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+/Build/
+
+#### OS specific files
+.DS_Store?
+ehthumbs.db
+Icon?
+Thumbs.db
+.directory
+*.log
+*~
+*.so
+*.dll
+*.exe
+
+#### Squirrel
+#/squirrel/build
+#!/squirrel/CMakeLists.txt

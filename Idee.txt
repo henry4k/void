@@ -1,0 +1,19 @@
+Map:
+	Speichert Pfade zu den Tilemaps
+	Speichert Zuweisungen von Name und Id (Name => Id | Id => Name)
+
+Tilemap:
+	"Name"
+	{
+		shape: "block",     // none, block, slope, ...
+		rendering: "solid", // invisible, solid, alpha
+		texture: "TexturName.png",
+		front: { x: 10, y: 10 },
+		back:  { x: 11, y: 10 },
+		left:  { x: 12, y: 10 },
+		right: { x: 13, y: 10 },
+		top:   { x: 14, y: 10 },
+		bottom:{ x: 15, y: 10 },
+		// ^- Je nachdem welche Seiten der Block so hat
+		// Die Tiles in der Tilemap sind alle gleichgroß (also z.B. alle 32x32 oder so)
+	}

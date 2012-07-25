@@ -1,0 +1,14 @@
+JsonContext ctx;
+JsonNode node;
+while(JsonNext(&ctx,&node))
+{
+	if(node.type == JSON_T_KEY && !strcmp(node.data.str.v,"test"))
+	{
+		if(JsonNext(&ctx,&node) && node.type == JSON_T_STRING)
+			printf("%s", node.data.str.v);
+	}
+	else
+	{
+		// ...
+	}
+}
