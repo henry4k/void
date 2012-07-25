@@ -1,9 +1,11 @@
 #ifndef MODEL_HPP
 #define MODEL_HPP
 
-#include "../Common.hpp"
+#include <vector>
+
 #include <tools4k/Math.h>
 #include <tools4k/Vector.h>
+#include <kj/Common.h>
 
 using tools4k::vec2f;
 using tools4k::vec3f;
@@ -28,29 +30,13 @@ class Mesh
 {
 	public:
 		Mesh();
-		~Mesh();
+		void clear();
 		
 		bool load( const char* file );
 		
-		
-		const Vertex* vertices() const { return m_Vertices; }
-		int vertexCount() const { return m_VertexCount; }
-		
-		const unsigned short* indices() const { return m_Indices; }
-		int indexCount() const { return m_IndexCount; }
-		
-		int pimitiveType() const { return m_PrimitiveType; }
-		
-	protected:
-		void clear();
-		
-		Vertex* m_Vertices;
-		int m_VertexCount;
-		
-		unsigned short* m_Indices;
-		int m_IndexCount;
-		
-		int m_PrimitiveType;
+		int primitiveType;
+		std::vector<Vertex> vertices;
+		std::vector<unsigned short> indices;
 };
 
 
@@ -71,6 +57,8 @@ class Model
 		int size() const { return m_Size; }
 		
 	protected:
+		void clear();
+		
 		Handle m_VertexBuffer;
 		Handle m_IndexBuffer;
 		int m_PrimitiveType;

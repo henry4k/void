@@ -1,9 +1,9 @@
 #ifndef CLIENT_MAP_HPP
 #define CLIENT_MAP_HPP
 
-#include <kj/Map.hpp>
-#include <kj/Client/Model.hpp>
-#include <kj/Client/Texture.hpp>
+#include <kj/Map.h>
+#include <kj/Client/Model.h>
+#include <kj/Client/Texture.h>
 
 
 struct ClientMaterial

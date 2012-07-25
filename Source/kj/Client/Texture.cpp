@@ -1,10 +1,11 @@
 #include <stdio.h>
 #include <string.h>
 #include <png.h>
+#include <string>
 
-#include <kj/Common.hpp>
-#include <kj/Client/OpenGL.hpp>
-#include <kj/Client/Texture.hpp>
+#include <kj/Common.h>
+#include <kj/Client/OpenGL.h>
+#include <kj/Client/Texture.h>
 
 
 /// ---- Image ----
@@ -270,7 +271,7 @@ bool Texture::loadTexture2d( int options, const char* file )
 	Image image;
 	if(!image.load(file))
 		return false;
-	return loadTexture2d(options, &image);
+	return createTexture2d(options, &image);
 }
 
 bool Texture::createCubeMap( int options, const Image* images )
@@ -321,7 +322,7 @@ bool Texture::loadCubeMap( int options, const char* path, const char* extension 
 		if(!images[i].load(file.c_str()))
 			return false;
 	}
-	return createTextureCube(options, images);
+	return createCubeMap(options, images);
 }
 
 

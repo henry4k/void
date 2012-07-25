@@ -2,8 +2,9 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "OpenGL.hpp"
-#include "Model.hpp"
+#include <kj/Client/OpenGL.h>
+#include <kj/Client/Model.h>
+#include <kj/Client/Shader.h>
 
 
 
@@ -30,17 +31,17 @@ void EnableVertexArrays()
 
 void BindVertexAttributes( const Shader* shader )
 {
-	// FIXME
-	glBindAttribLocation(shader, VERTEX_POSITION, "VertexPosition");
-	glBindAttribLocation(shader, VERTEX_TEXCOORD, "VertexTexCoord");
-	glBindAttribLocation(shader, VERTEX_NORMAL,   "VertexNormal");
-	glBindAttribLocation(shader, VERTEX_TANGENT,  "VertexTangent");
-// 	glBindAttribLocation(shader, VERTEX_COLOR,    "VertexColor");
+	Handle name = shader->name();
+	glBindAttribLocation(name, VERTEX_POSITION, "VertexPosition");
+	glBindAttribLocation(name, VERTEX_TEXCOORD, "VertexTexCoord");
+	glBindAttribLocation(name, VERTEX_NORMAL,   "VertexNormal");
+	glBindAttribLocation(name, VERTEX_TANGENT,  "VertexTangent");
+// 	glBindAttribLocation(name, VERTEX_COLOR,    "VertexColor");
 }
 
 void SetVertexAttributePointers()
 {
-	int offset = 0;
+	long offset = 0;
 #define AttribPointer(Name,Count,TypeName,Type) glVertexAttribPointer( Name , Count , TypeName, GL_TRUE, sizeof(Vertex), (void*)offset); offset += sizeof( Type ) * Count;
 	AttribPointer(VERTEX_POSITION,3,GL_FLOAT,float);
 	AttribPointer(VERTEX_TEXCOORD,2,GL_FLOAT,float);
@@ -225,13 +226,13 @@ bool ReadHeader( MeshInfo* info )
 		
 		if(ContinuesWith(info, "element vertex "))
 		{
-			info->m_VertexCount = ReadInt(info);
+			info->mesh->vertices.resize( ReadInt(info) );
 			continue;
 		}
 		
 		if(ContinuesWith(info, "element face "))
 		{
-			info->mesh->indexCount = ReadInt(info)*3;
+			info->mesh->indices.resize( ReadInt(info)*3 );
 			continue;
 		}
 		
@@ -248,14 +249,13 @@ bool ReadVertices( MeshInfo* info )
 {
 	Mesh* mesh = info->mesh;
 	
-	mesh->vertices() = Alloc(Vertex,m_VertexCount);
-	for(int i = 0; i < m_VertexCount; i++)
+	for(int i = 0; i < mesh->vertices.size(); i++)
 	{
-		Vertex* vertex = &mesh->vertices()[i];
+		Vertex& vertex = mesh->vertices[i];
 		
 		ReadLine(info);
 		
-	#define READ_VERTEX(P) vertex-> P = ReadFloat(info);
+	#define READ_VERTEX(P) vertex. P = ReadFloat(info);
 		READ_VERTEX(position.x)
 		READ_VERTEX(position.y)
 		READ_VERTEX(position.z)
@@ -267,8 +267,7 @@ bool ReadVertices( MeshInfo* info )
 	#undef READ_VERTEX
 	}
 	
-	mesh->indices = Alloc(unsigned short,mesh->indexCount);
-	for(int i = 0; i < mesh->indexCount; i += 3)
+	for(int i = 0; i < mesh->indices.size(); i += 3)
 	{
 		ReadLine(info);
 		
@@ -347,13 +346,13 @@ void CalculateTangentArray( int vertexCount, Vertex* vertex, int triangleCount, 
 		tdir.y = (s1 * y2 - s2 * y1) * r;
 		tdir.z = (s1 * z2 - s2 * z1) * r;
 		
-		tan1[i1] = Add(tan1[i1], sdir);
-		tan1[i2] = Add(tan1[i2], sdir);
-		tan1[i3] = Add(tan1[i3], sdir);
+		tan1[i1] = tan1[i1] + sdir;
+		tan1[i2] = tan1[i2] + sdir;
+		tan1[i3] = tan1[i3] + sdir;
 		
-		tan2[i1] = Add(tan2[i1], tdir);
-		tan2[i2] = Add(tan2[i2], tdir);
-		tan2[i3] = Add(tan2[i3], tdir);
+		tan2[i1] = tan2[i1] + tdir;
+		tan2[i2] = tan2[i2] + tdir;
+		tan2[i3] = tan2[i3] + tdir;
 		
 		triangle++;
 	}
@@ -365,10 +364,10 @@ void CalculateTangentArray( int vertexCount, Vertex* vertex, int triangleCount, 
 		
 		// Gram-Schmidt orthogonalize
 		vec3f* tangent3 = (vec3f*)&vertex[a].tangent;
-		*tangent3 = Normalized(Sub(t,Mul(n,Dot(n,t))));
+		*tangent3 = (t - n*n.dot(t)).normalize();
 		
 		// Calculate handedness
-		vertex[a].tangent.w = (Dot(Cross(n, t), tan2[a]) < 0.0F) ? -1.0F : 1.0F;
+		vertex[a].tangent.w = (n.cross(t).dot(tan2[a]) < 0.0F) ? -1.0F : 1.0F;
 	}
 	
 	delete[] tan1;
@@ -386,36 +385,15 @@ void FreeMeshInfo( const MeshInfo* info )
 
 
 Mesh::Mesh() :
-	m_Vertices(NULL),
-	m_VertexCount(0),
-	m_Indices(NULL),
-	m_IndexCount(0),
-	m_PrimitiveType(0)
+	primitiveType(0)
 {
-}
-
-Mesh::~Mesh()
-{
-	clear();
 }
 
 void Mesh::clear()
 {
-	if(m_Vertices)
-	{
-		delete[] m_Vertices;
-		m_Vertices = NULL,
-		m_VertexCount = 0;
-	}
-	
-	if(m_Indices)
-	{
-		delete[] m_Indices;
-		m_Indices = NULL,
-		m_IndexCount = 0;
-	}
-	
-	m_PrimitiveType = 0;
+	primitiveType = 0;
+	vertices.clear();
+	indices.clear();
 }
 
 bool Mesh::load( const char* file )
@@ -429,12 +407,12 @@ bool Mesh::load( const char* file )
 		return false;
 	}
 	
-	m_PrimitiveType = GL_TRIANGLES;
+	primitiveType = GL_TRIANGLES;
 	
 	MeshInfo info;
 	info.file = f;
 	info.lineNumber = 0;
-	info.mesh = mesh;
+	info.mesh = this;
 	
 	if(!ReadHeader(&info))
 	{
@@ -452,7 +430,7 @@ bool Mesh::load( const char* file )
 		return false;
 	}
 	
-	CalculateTangentArray(m_VertexCount, m_Vertices, m_IndexCount/3, (Triangle*)m_Indices);
+	CalculateTangentArray(vertices.size(), vertices.data(), indices.size()/3, (Triangle*)indices.data());
 	
 	FreeMeshInfo(&info);
 	return true;
@@ -496,13 +474,13 @@ bool Model::create( const Mesh* mesh )
 	glGenBuffers(1, &m_IndexBuffer);
 	
 	glBindBuffer(GL_ARRAY_BUFFER, m_VertexBuffer);
-	glBufferData(GL_ARRAY_BUFFER, mesh->vertexCount()*sizeof(Vertex), mesh->vertices(), GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, mesh->vertices.size()*sizeof(Vertex), mesh->vertices.data(), GL_STATIC_DRAW);
 	
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_IndexBuffer);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, mesh->indexCount()*sizeof(unsigned short), mesh->indices(), GL_STATIC_DRAW);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, mesh->indices.size()*sizeof(unsigned short), mesh->indices.data(), GL_STATIC_DRAW);
 	
-	m_Size = mesh->indexCount();
-	m_PrimitiveType = mesh->primitiveType();
+	m_Size = mesh->indices.size();
+	m_PrimitiveType = mesh->primitiveType;
 	
 	CheckGl();
 	return true;

@@ -3,8 +3,8 @@
 #include <list>
 #include <map>
 
-#include <kj/Common.hpp>
-#include <kj/Resource.hpp>
+#include <kj/Common.h>
+#include <kj/Resource.h>
 
 
 /// ---- ResourceType ----

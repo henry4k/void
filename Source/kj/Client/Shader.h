@@ -4,8 +4,8 @@
 #include <map>
 #include <string>
 
-#include "../Common.hpp"
-#include "Texture.hpp"
+#include <kj/Common.h>
+#include <kj/Client/Texture.h>
 
 
 
@@ -21,6 +21,8 @@ class Shader
 		void setUniform( const char* name, int value ) const;
 		void setUniform( const char* name, float value ) const;
 		void setUniform( const char* name, int length, const float* value ) const;
+		
+		Handle name() const { return m_Name; }
 		
 	protected:
 		void clear();

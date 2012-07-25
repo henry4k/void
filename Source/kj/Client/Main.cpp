@@ -1,10 +1,10 @@
-#include <kj/Common.hpp>
-#include <kj/Client/OpenGL.hpp>
-#include <kj/Client/Map.hpp>
-#include <kj/Client/Shader.hpp>
-#include <kj/Client/Model.hpp>
-#include <kj/Client/Window.hpp>
-#include <kj/Client/Camera.hpp>
+#include <kj/Common.h>
+#include <kj/Client/OpenGL.h>
+#include <kj/Client/Map.h>
+#include <kj/Client/Shader.h>
+#include <kj/Client/Model.h>
+#include <kj/Client/Window.h>
+#include <kj/Client/Camera.h>
 
 
 Camera	g_Camera;

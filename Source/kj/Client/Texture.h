@@ -1,8 +1,8 @@
 #ifndef TEXTURE_HPP
 #define TEXTURE_HPP
 
-#include "../Common.hpp"
-#include "OpenGL.hpp"
+#include <kj/Common.h
+#include <kj/Client/OpenGL.h>
 
 class Image
 {

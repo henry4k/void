@@ -1,6 +1,7 @@
-#include <kj/Client/OpenGL.hpp>
-#include <kj/Client/Map.hpp>
+#include <kj/Client/OpenGL.h>
+#include <kj/Client/Map.h>
 
+/*
 
 Vertex CreateVertex(
 	float px, float py, float pz,
@@ -106,8 +107,11 @@ void AddCube( GeneratorContext* ctx )
 	}
 }
 
+*/
+
 void CreateMeshFromMap( Mesh* mesh, const Map* map, int xstart, int ystart, int zstart, int width, int height, int depth )
 {
+	/*
 	GeneratorContext ctx;
 	ctx.map = map;
 	ctx.max = width*height*depth*MaxVerticesPerVoxel;
@@ -158,4 +162,5 @@ void CreateMeshFromMap( Mesh* mesh, const Map* map, int xstart, int ystart, int 
 	}
 	
 	mesh->primitiveType = GL_QUADS;
+	*/
 }

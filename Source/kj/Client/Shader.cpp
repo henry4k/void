@@ -1,9 +1,9 @@
 #include <stdio.h>
 
-#include "../Common.hpp"
-#include "OpenGL.hpp"
-#include "Model.hpp"
-#include "Shader.hpp"
+#include <kj/Common.h>
+#include <kj/Client/OpenGL.h>
+#include <kj/Client/Model.h>
+#include <kj/Client/Shader.h>
 
 
 
@@ -169,7 +169,7 @@ bool Shader::load( const char* vert, const char* frag )
 	Handle program = glCreateProgram();
 	glAttachShader(program, vertObject);
 	glAttachShader(program, fragObject);
-	BindVertexAttributes(program);
+	BindVertexAttributes(this);
 	
 	glLinkProgram(program);
 	{

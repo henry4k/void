@@ -1,7 +1,7 @@
-#include "../Common.hpp"
-#include "OpenGL.hpp"
-#include "Model.hpp"
-#include "Window.hpp"
+#include <kj/Common.h>
+#include <kj/Client/OpenGL.h>
+#include <kj/Client/Model.h>
+#include <kj/Client/Window.h>
 
 
 bool Running = true;

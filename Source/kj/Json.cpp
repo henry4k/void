@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <ctype.h>
-#include "Json.hpp"
+#include "Json.h"
 
 #define JSON_BUFFER_STEP_SIZE 128
 

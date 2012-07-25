@@ -1,5 +1,5 @@
 #include <string.h>
-#include <kj/Config.hpp>
+#include <kj/Config.h>
 
 
 void FreeNode( const ConfigNode* node )

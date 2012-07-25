@@ -1,5 +1,5 @@
-#include <kj/Common.hpp>
-#include <kj/Client/OpenGL.hpp>
+#include <kj/Common.h>
+#include <kj/Client/OpenGL.h>
 
 
 void CheckGl_( const char* file, int line )

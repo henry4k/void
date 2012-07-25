@@ -1,5 +1,5 @@
-#include <kj/Common.hpp>
-#include <kj/Map.hpp>
+#include <kj/Common.h>
+#include <kj/Map.h>
 
 int main()
 {
