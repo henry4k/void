@@ -8,43 +8,33 @@
 #include <kj/Common.h>
 
 
-enum VoxelShapes
+enum VoxelCollisionShapes
 {
-	VSHAPE_NONE = 0, // This voxel is empty
-	VSHAPE_CUBE      // This voxel is a cube
-};
-
-enum VoxelRendering
-{
-	VRENDER_INVISIBLE = 0, // No vertices will be generated at all
-	VRENDER_SOLID,         // No transparency at all
-	VRENDER_ALPHA          // ...
-};
-
-enum VoxelFace
-{
-	VFACE_NONE = 0,
-	VFACE_FRONT,
-	VFACE_BACK,
-	VFACE_TOP,
-	VFACE_BOTTOM,
-	VFACE_LEFT,
-	VFACE_RIGHT,
-	VFACE_COUNT,
+	VCSHAPE_NONE = 0, // This voxel is empty
+	VCSHAPE_CUBE      // This voxel is a cube
 };
 
 
-
-struct TileMap
+class VoxelType
 {
-	std::string fileName;
-};
-
-struct VoxelType
-{
-	int tileMap;
-	std::string name;
-	int shape;
+	public:
+		static const int IdCount = (1 << 12); // 4096
+		static const int InvalidId = -1;
+		
+		VoxelType( int id, const char* name ) :
+			m_Id(id),
+			m_Name(name)
+		{
+		}
+		
+		int id() const { return m_Id; }
+		const char* name() const { return m_Name.c_str(); }
+		
+		int collisionShape;
+		
+	private:
+		int m_Id;
+		std::string m_Name;
 };
 
 struct Voxel
@@ -61,17 +51,25 @@ class Map
 		Map();
 		~Map();
 		
-		Voxel getVoxel(int x, int y, int z);
+		Voxel getVoxel(int x, int y, int z) const;
 		void setVoxel(int x, int y, int z, Voxel voxel);
 		
+		
+		int getFreeVoxelType() const;
+		virtual int createVoxelType( const char* name, int id = VoxelType::InvalidId );
+		
+		int getTypeIdByName( const char* name ) const;
+		
+		VoxelType* getVoxelType( int typeId );
 		const VoxelType* getVoxelType( int typeId ) const;
 		
 	private:
-		VoxelChunk* getChunkAt( int chunkX, int chunkY, int chunkZ, bool create );
-		Voxel* voxelAt( int x, int y, int z, bool create );
+		VoxelChunk* getChunkAt( int chunkX, int chunkY, int chunkZ ) const;
+		VoxelChunk* createChunkAt( int chunkX, int chunkY, int chunkZ );
 		
-		std::vector<TileMap> m_TileMaps;
-		std::vector<VoxelType> m_Types;
+		VoxelType* m_Types[VoxelType::IdCount];
+		std::map<std::string,int> m_TypeIdByName;
+		
 		std::map<uint64_t,VoxelChunk*> m_Chunks;
 };
 

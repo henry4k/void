@@ -1,7 +1,12 @@
+#include <tools4k/Vector.h>
+#include <kj/Resource.h>
 #include <kj/Client/OpenGL.h>
 #include <kj/Client/Map.h>
 
-/*
+using tools4k::vec2f;
+using tools4k::vec3f;
+using tools4k::vec3i;
+
 
 Vertex CreateVertex(
 	float px, float py, float pz,
@@ -21,7 +26,7 @@ Vertex CreateVertex(
 	return v;
 }
 
-const int MaxVerticesPerVoxel = 6*4; // block with 6 visible faces
+const int AverageVerticesPerVoxel = 6*4; // block with 6 visible faces
 
 struct VoxelModel
 {
@@ -30,12 +35,47 @@ struct VoxelModel
 };
 
 VoxelModel CubeModel;
+Vertex CubeTop[] =
+{
+	CreateVertex(0,0,1, 0,0, 0,-1,0),
+	CreateVertex(1,0,1, 1,0, 0,-1,0),
+	CreateVertex(1,1,1, 1,1, 0,-1,0),
+	CreateVertex(0,1,1, 0,1, 0,-1,0)
+};
+Vertex CubeBottom[] =
+{
+	CreateVertex(0,0,0, 0,0, 0,-1,0),
+	CreateVertex(0,1,0, 0,1, 0,-1,0),
+	CreateVertex(1,1,0, 1,1, 0,-1,0),
+	CreateVertex(1,0,0, 1,0, 0,-1,0)
+};
 Vertex CubeFront[] =
+{
+	CreateVertex(0,1,0, 0,0, 0,-1,0),
+	CreateVertex(0,1,1, 0,1, 0,-1,0),
+	CreateVertex(1,1,1, 1,1, 0,-1,0),
+	CreateVertex(1,1,0, 1,0, 0,-1,0)
+};
+Vertex CubeBack[] =
 {
 	CreateVertex(0,0,0, 0,0, 0,-1,0),
 	CreateVertex(1,0,0, 1,0, 0,-1,0),
-	CreateVertex(1,1,0, 1,1, 0,-1,0),
-	CreateVertex(0,1,0, 0,1, 0,-1,0)
+	CreateVertex(1,0,1, 1,1, 0,-1,0),
+	CreateVertex(0,0,1, 0,1, 0,-1,0)
+};
+Vertex CubeLeft[] =
+{
+	CreateVertex(0,0,0, 0,0, 0,-1,0),
+	CreateVertex(0,0,1, 0,1, 0,-1,0),
+	CreateVertex(0,1,1, 1,1, 0,-1,0),
+	CreateVertex(0,1,0, 1,0, 0,-1,0)
+};
+Vertex CubeRight[] =
+{
+	CreateVertex(1,0,0, 0,0, 0,-1,0),
+	CreateVertex(1,1,0, 1,0, 0,-1,0),
+	CreateVertex(1,1,1, 1,1, 0,-1,0),
+	CreateVertex(1,0,1, 0,1, 0,-1,0)
 };
 
 bool CreateVoxelModels()
@@ -46,40 +86,143 @@ bool CreateVoxelModels()
 	CubeModel.vertices[VFACE_FRONT]    = CubeFront;
 	CubeModel.vertexCount[VFACE_FRONT] = sizeof(CubeFront)/sizeof(Vertex);
 	
-	CubeModel.vertices[VFACE_BACK]    = NULL;
-	CubeModel.vertexCount[VFACE_BACK] = 0;
+	CubeModel.vertices[VFACE_BACK]    = CubeBack;
+	CubeModel.vertexCount[VFACE_BACK] = sizeof(CubeBack)/sizeof(Vertex);
 	
-	CubeModel.vertices[VFACE_TOP]    = NULL;
-	CubeModel.vertexCount[VFACE_TOP] = 0;
+	CubeModel.vertices[VFACE_TOP]    = CubeTop;
+	CubeModel.vertexCount[VFACE_TOP] = sizeof(CubeTop)/sizeof(Vertex);
 	
-	CubeModel.vertices[VFACE_BOTTOM]    = NULL;
-	CubeModel.vertexCount[VFACE_BOTTOM] = 0;
+	CubeModel.vertices[VFACE_BOTTOM]    = CubeBottom;
+	CubeModel.vertexCount[VFACE_BOTTOM] = sizeof(CubeBottom)/sizeof(Vertex);
 	
-	CubeModel.vertices[VFACE_LEFT]    = NULL;
-	CubeModel.vertexCount[VFACE_LEFT] = 0;
+	CubeModel.vertices[VFACE_LEFT]    = CubeLeft;
+	CubeModel.vertexCount[VFACE_LEFT] = sizeof(CubeLeft)/sizeof(Vertex);
 	
-	CubeModel.vertices[VFACE_RIGHT]    = NULL;
-	CubeModel.vertexCount[VFACE_RIGHT] = 0;
+	CubeModel.vertices[VFACE_RIGHT]    = CubeRight;
+	CubeModel.vertexCount[VFACE_RIGHT] = sizeof(CubeRight)/sizeof(Vertex);
+
+	return true;
 }
 bool CreatedVoxelModels = CreateVoxelModels();
+
+
+
+/// ---- TileMap ----
+
+TileMap::TileMap() :
+	diffuse(NULL),
+	tileSize(0)
+{
+}
+
+TileMap::~TileMap()
+{
+}
+
+
+/// ---- ClientMap ----
+
+ClientMap::ClientMap()
+{
+	memset(m_ClientTypes, 0, sizeof(m_ClientTypes));
+}
+
+ClientMap::~ClientMap()
+{
+	for(int j = 0; j < VoxelType::IdCount; j++)
+		if(m_ClientTypes[j])
+			delete m_ClientTypes[j];
+	
+	std::vector<TileMap>::const_iterator i = m_TileMaps.begin();
+	for(; i != m_TileMaps.end(); i++)
+		if(i->diffuse)
+			ReleaseResource(i->diffuse);
+}
+
+
+
+int ClientMap::createTileMap()
+{
+	m_TileMaps.resize(m_TileMaps.size()+1);
+	return m_TileMaps.size()-1;
+}
+
+TileMap* ClientMap::getTileMap( int tileMap )
+{
+	return &m_TileMaps[tileMap];
+}
+
+const TileMap* ClientMap::getTileMap( int tileMap ) const
+{
+	return &m_TileMaps[tileMap];
+}
+
+
+
+
+
+int ClientMap::createVoxelType(const char* name, int id)
+{
+	id = Map::createVoxelType(name, id);
+	if(id == VoxelType::InvalidId)
+		return VoxelType::InvalidId;
+	
+	m_ClientTypes[id] = new ClientVoxelType;
+	return id;
+}
+
+ClientVoxelType* ClientMap::getClientVoxelType( int typeId )
+{
+	if(typeId >= VoxelType::IdCount)
+		return NULL;
+	return m_ClientTypes[typeId];
+}
+
+const ClientVoxelType* ClientMap::getClientVoxelType( int typeId ) const
+{
+	if(typeId >= VoxelType::IdCount)
+		return NULL;
+	return m_ClientTypes[typeId];
+}
+
+
+
+
 
 struct GeneratorContext
 {
 	const Map* map;
 	
-	int max;
-	Vertex* vertex;
-	int i;
+	std::vector<Vertex> vertices;
 	
-	int start[3];
-	int size[3];
+	
+	aabb3i cube;
 	
 	// current voxel
-	int op[3];
-	int ap[3];
+	vec3i offset;
+	vec3i absolute;
 	Voxel voxel;
 	const VoxelType* voxelType;
+	const ClientVoxelType* clientVoxelType;
+	const TileMap* tileMap;
 };
+
+vec2f CalcTexCoord( vec2f originalTexCoord, const TileMap* tm, int tileIndex )
+{
+	const int tilesPerRow = tm->width / tm->tileSize;
+	const float tileTexSize = double(tm->tileSize) / double(tm->width);
+	
+	vec2f r =
+		originalTexCoord*tileTexSize +
+		vec2f(
+			(tileIndex % tilesPerRow)*tileTexSize,
+			(tileIndex / tilesPerRow)*tileTexSize
+		);
+	
+	Log("%f/%f => %f/%f", originalTexCoord.x, originalTexCoord.y, r.x, r.y);
+	
+	return r;
+}
 
 void AddCube( GeneratorContext* ctx )
 {
@@ -88,79 +231,95 @@ void AddCube( GeneratorContext* ctx )
 		for(int vertex = 0; vertex < CubeModel.vertexCount[face]; vertex++)
 		{
 			Vertex* s = &CubeModel.vertices[face][vertex];
-			Vertex* d = &ctx->vertex[ctx->i];
+			Vertex d;
 			
-			float txoff = ctx.voxelType->faces[face*2+0];
-			float tyoff = ctx.voxelType->faces[face*2+1];
+			d.position = ctx->offset + s->position;
+			d.texCoord = CalcTexCoord(s->texCoord, ctx->tileMap, ctx->clientVoxelType->faces[face]);
+			d.normal = s->normal;
 			
-			d->position.x = ctx->op[0] + s->position.x;
-			d->position.y = ctx->op[1] + s->position.y;
-			d->position.z = ctx->op[2] + s->position.z;
-			d->texCoord.x = s->texCoord.x;
-			d->texCoord.y = s->texCoord.y;
-			d->normal.x = s->normal.x;
-			d->normal.y = s->normal.y;
-			d->normal.z = s->normal.z;
-			
-			ctx->i++;
+			ctx->vertices.push_back(d);
 		}
 	}
 }
 
-*/
 
-void CreateMeshFromMap( Mesh* mesh, const Map* map, int xstart, int ystart, int zstart, int width, int height, int depth )
+bool ClientMap::createMesh( Mesh* mesh, int tileMap, aabb3i cube ) const
 {
-	/*
-	GeneratorContext ctx;
-	ctx.map = map;
-	ctx.max = width*height*depth*MaxVerticesPerVoxel;
-	ctx.vertex = Alloc(Vertex, ctx.max);
-	ctx.i = 0;
-	ctx.start[0] = xstart;
-	ctx.start[1] = ystart;
-	ctx.start[2] = zstart;
-	ctx.size[0] = width;
-	ctx.size[1] = height;
-	ctx.size[2] = depth;
-	ctx.op[0] = 0;
-	ctx.op[1] = 0;
-	ctx.op[2] = 0;
+	vec3i size = cube.size();
 	
-	for(ctx.op[0] = 0; ctx.op[0] < ctx.size[0]; ctx.op[0]++) 
-	for(ctx.op[1] = 0; ctx.op[1] < ctx.size[1]; ctx.op[1]++) 
-	for(ctx.op[2] = 0; ctx.op[2] < ctx.size[2]; ctx.op[2]++) 
+	GeneratorContext ctx;
+	ctx.map = this;
+	
+	
+	ctx.vertices.reserve(size.volume()*AverageVerticesPerVoxel);
+	
+	ctx.cube = cube;
+	ctx.offset = vec3i(0,0,0);
+	
+	for(ctx.offset.x = 0; ctx.offset.x < size.x; ctx.offset.x++) 
+	for(ctx.offset.y = 0; ctx.offset.y < size.y; ctx.offset.y++) 
+	for(ctx.offset.z = 0; ctx.offset.z < size.z; ctx.offset.z++) 
 	{
-		ctx.ap[0] = ctx.op[0]+ctx.start[0];
-		ctx.ap[1] = ctx.op[1]+ctx.start[1];
-		ctx.ap[2] = ctx.op[2]+ctx.start[2];
+		ctx.absolute = cube.min + ctx.offset;
 		
-		ctx.voxel = GetVoxelAt(map, ctx.ap[0],ctx.ap[1],ctx.ap[2]);
-		ctx.voxelType = GetVoxelType(map, ctx.voxel.typeId);
+		ctx.voxel = getVoxel(ctx.absolute.x,ctx.absolute.y,ctx.absolute.z);
+		if(ctx.voxel.typeId == VoxelType::InvalidId)
+			continue;
 		
-		switch(ctx.voxelType->shape)
+		ctx.voxelType = getVoxelType(ctx.voxel.typeId);
+		if(!ctx.voxelType)
+			continue;
+		
+		ctx.clientVoxelType = getClientVoxelType(ctx.voxel.typeId);
+		if(ctx.clientVoxelType->tileMap != tileMap)
+			continue;
+		
+		ctx.tileMap = &m_TileMaps[ctx.clientVoxelType->tileMap];
+		
+		switch(ctx.voxelType->collisionShape)
 		{
-			case VSHAPE_CUBE:
+			case VCSHAPE_CUBE:
 				AddCube(&ctx);
 				break;
 			
-			case VSHAPE_NONE:
+			case VCSHAPE_NONE:
 			default:
 				// Do nothing
 				;
 		}
 	}
 	
-	mesh->vertexCount = ctx.i;
-	mesh->vertices = Realloc(Vertex, ctx.vertex, mesh->vertexCount);
 	
-	mesh->indexCount = mesh->vertexCount;
-	mesh->indices = Alloc(unsigned short, mesh->indexCount);
-	for(int i = 0; i < mesh->indexCount; i++)
-	{
+	mesh->vertices.clear();
+	mesh->vertices.swap(ctx.vertices);
+	
+	Log("Vertex count: %d", mesh->vertices.size());
+	
+	mesh->indices.resize(mesh->vertices.size());
+	for(int i = 0; i < mesh->indices.size(); i++)
 		mesh->indices[i] = i;
-	}
 	
 	mesh->primitiveType = GL_QUADS;
-	*/
+	
+	return true;
+}
+
+void ClientMap::updateModel( aabb3i cube )
+{
+	Mesh mesh;
+	m_Model.resize(m_TileMaps.size());
+	for(int i = 0; i < m_Model.size(); i++)
+	{
+		createMesh(&mesh, i, cube);
+		m_Model[i].create(&mesh);
+	}
+}
+
+void ClientMap::draw() const
+{
+	for(int i = 0; i < m_Model.size(); i++)
+	{
+		m_TileMaps[i].diffuse->bind(0);
+		m_Model[i].draw();
+	}
 }

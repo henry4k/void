@@ -18,7 +18,7 @@ struct ResourceType
 std::map<Handle,ResourceType> g_ResourceTypes;
 
 
-void RegisterResourceType( Handle typeId, ResourceAllocFn allocFn )
+void RegisterResourceType_( Handle typeId, ResourceAllocFn allocFn )
 {
 	if(!allocFn)
 		Error("Invalid resource structure (id = %d)", typeId);

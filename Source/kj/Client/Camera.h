@@ -1,50 +1,94 @@
-#include <string.h>
-#include <math.h>
+#ifndef __CLIENT_CAMERA_H__
+#define __CLIENT_CAMERA_H__
 
-struct Camera
+#include <tools4k/Vector.h>
+#include <tools4k/Matrix.h>
+#include <tools4k/Quaternion.h>
+
+using tools4k::vec2f;
+using tools4k::vec3f;
+using tools4k::vec4f;
+using tools4k::Quaternion;
+using tools4k::mat4f;
+
+class Camera
 {
-	float radius;
-	float rx, ry, rz; // rotation
-	
-	float px, py, pz; // position
-	float ux, uy, uz; // up vector
+	public:
+		/// Access the virtual screen size
+		void setScreen( vec2f screen );
+		vec2f getScreen() const;
+		
+		/// Access the near clip plane distance
+		void setNear( float near );
+		float getNear() const;
+		
+		/// Access the far clip plane distance
+		void setFar( float far );
+		float getFar() const;
+		
+		/// Read the matrix
+		const mat4f& getProjectionMatrix() const { return m_ProjectionMatrix; }
+		const mat4f& getModelViewMatrix() const  { return m_ModelViewMatrix; }
+		
+		/// Access the position
+		void setPosition( vec3f position );
+		vec3f getPosition() const;
+		
+		/// Access the rotation
+		void setRotation( Quaternion rotation );
+		Quaternion getRotation() const;
+		
+		/// Recalculate the matrix if something has changed
+		virtual void update();
+		
+		/// Upload matrix
+		void upload();
+
+	protected:
+		Camera();
+		
+		vec2f m_Screen;
+		float m_Near, m_Far;
+
+		bool m_NeedsUpdate;
+		mat4f m_ProjectionMatrix;
+		mat4f m_ModelViewMatrix;
+		
+		vec3f m_Position;
+		Quaternion m_Rotation;
+		
+		virtual void calcMatrix() = 0;
 };
 
-void InitCamera( Camera* cam )
+class PerspectivicCamera : public Camera
 {
-	memset(cam, 0, sizeof(Camera));
-	cam->radius = 20;
-}
+	public:
+		PerspectivicCamera();
 
-void UpdateCamera( Camera* cam )
+		/// Access the field of view
+		void setFov( float fov );
+		float getFov() const;
+		
+		/// Access the view aspect (width / height)
+		void setAspectModifier( float aspect );
+		float getAspectModifier() const;
+		
+	protected:
+		float m_Fov;
+		float m_AspectModifier;
+		
+		void calcMatrix();
+};
+
+class OrthogonalCamera : public Camera
 {
-	// Input
-	
-	if(KeyState('Q')) cam->rz += 0.01;
-	if(KeyState('E')) cam->rz -= 0.01;
-	if(KeyState('W')) cam->ry += 0.01;
-	if(KeyState('S')) cam->ry -= 0.01;
-	if(KeyState('A')) cam->rx += 0.01;
-	if(KeyState('D')) cam->rx -= 0.01;
-	
-	
-	// Calculation
-	
-	// up vector
-	cam->ux = 0; // sin(cam->rz);
-	cam->uy = 1; // cos(cam->rz);
-	cam->uz = 0;
-	
-	
-	// position
-	
-	cam->px = 0;
-	cam->py = 0;
-	cam->pz = 0;
-	
-// 	cam->px += sin(cam->ry)*cam->radius;
-// 	cam->py += cos(cam->ry)*cam->radius;
-	
-	cam->pz += sin(cam->rx)*cam->radius;
-	cam->px += cos(cam->rx)*cam->radius;
-}
+	public:
+		OrthogonalCamera();
+		
+	protected:
+		void calcMatrix();
+};
+
+
+
+#endif

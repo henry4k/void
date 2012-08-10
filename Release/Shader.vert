@@ -1,4 +1,6 @@
-varying vec3 TexCoord;
+#version 120
+
+varying vec2 TexCoord;
 
 attribute vec3 VertexPosition;
 attribute vec2 VertexTexCoord;
@@ -8,5 +10,5 @@ attribute vec4 VertexTangent;
 void main()
 {
 	gl_Position = gl_ModelViewProjectionMatrix * vec4(VertexPosition, 1.0);
-	TexCoord = normalize( VertexPosition );
+	TexCoord = VertexTexCoord;
 }

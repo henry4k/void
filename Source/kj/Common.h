@@ -6,6 +6,18 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <tools4k/Common.h>
+#include <tools4k/Logic.h>
+
+
+using tools4k::BoundBy;
+using tools4k::Min;
+using tools4k::Max;
+using tools4k::Abs;
+using tools4k::Inside;
+using tools4k::InsideArray;
+using tools4k::Wrap;
+
 
 // -- Logging functions --
 
@@ -24,6 +36,5 @@ const int MaxPathLength = 256;
 const int MaxNameLength = 64;
 
 typedef unsigned int Handle;
-
 
 #endif
