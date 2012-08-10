@@ -501,4 +501,6 @@ void Model::draw() const
 	
 	SetVertexAttributePointers();
 	glDrawElements(m_PrimitiveType, m_Size, GL_UNSIGNED_SHORT, 0);
+	
+	CheckGl();
 }

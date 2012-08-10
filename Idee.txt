@@ -17,3 +17,15 @@ Tilemap:
 		// ^- Je nachdem welche Seiten der Block so hat
 		// Die Tiles in der Tilemap sind alle gleichgroß (also z.B. alle 32x32 oder so)
 	}
+
+
+
+VoxelType
+	Name
+	Id
+	CollisionShape
+	...
+
+
+In der (serialisierten) Map wird jedem Typ-Namen eine Id zugewiesen, mit welcher die in der Map gespeicherten Voxel diesen bezeichnen
+

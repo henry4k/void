@@ -6,11 +6,6 @@ struct Dummy : Resource
 	int foo;
 	int bar;
 	
-	static Resource* Alloc()
-	{
-		return new Dummy;
-	}
-	
 	bool load( const char* filePath )
 	{
 		foo = 1;
@@ -22,7 +17,7 @@ struct Dummy : Resource
 int main()
 {
 	InitializeResourceManager();
-	RegisterResourceType(1, Dummy::Alloc);
+	RegisterResourceType<Dummy>(1);
 	
 	Dummy* dummy = (Dummy*)LoadResource(1, "FooBar.dummy");
 	ReleaseResource(dummy);

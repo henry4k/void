@@ -1,4 +1,6 @@
 #include <stdio.h>
+#include <string>
+#include <fstream>
 
 #include <kj/Common.h>
 #include <kj/Client/OpenGL.h>
@@ -9,36 +11,19 @@
 
 /// ---- Utils ----
 
-char* LoadFile( const char* path, int* sizeOut )
+std::string StringFromFile( const char* path )
 {
-	FILE* f = fopen(path, "r");
-	if(!f)
+	std::ifstream f(path);
+	std::string r;
+	
+	while( f.good() )
 	{
-		Log("Can't open file '%s'", path);
-		return 0;
+		std::string line;
+		std::getline(f, line);
+		r.append(line + "\n");
 	}
 	
-	fseek(f, 0, SEEK_END);
-	int size = ftell(f);
-	fseek(f, 0, SEEK_SET);
-	
-	char* b = new char[size];
-	if(fread(b, 1, size, f) != size)
-	{
-		Error("Can't read file '%s'", path);
-		delete[] b;
-		fclose(f);
-		return 0;
-	}
-	fclose(f);
-	
-	*sizeOut = size;
-	return b;
-}
-
-void FreeFile( const char* fileData )
-{
-	delete[] fileData;
+	return r;
 }
 
 void ShowShaderLog( Handle handle )
@@ -46,7 +31,7 @@ void ShowShaderLog( Handle handle )
 	GLint length = 0;
 	glGetShaderiv(handle, GL_INFO_LOG_LENGTH, &length);
 	
-	char* log = 0;
+	char* log = NULL;
 	if(length)
 	{
 		log = new char[length];
@@ -65,7 +50,7 @@ void ShowProgramLog( Handle handle )
 	GLint length = 0;
 	glGetProgramiv(handle, GL_INFO_LOG_LENGTH, &length);
 
-	char* log = 0;
+	char* log = NULL;
 	if(length)
 	{
 		log = new char[length];
@@ -83,13 +68,13 @@ Handle CreateShaderObject( const char* file, int type )
 {
 	Handle handle = glCreateShader(type);
 	
-	int size;
-	const char* source = LoadFile(file, &size);
-	if(!source)
+	std::string source = StringFromFile(file);
+	if(source.empty())
 		return 0;
 	
-	glShaderSource(handle, 1, &source, &size);
-	FreeFile(source);
+	const char* shaderSource = source.c_str();
+	int shaderLength = source.length();
+	glShaderSource(handle, 1, &shaderSource, &shaderLength);
 	
 	glCompileShader(handle);
 	
@@ -167,6 +152,7 @@ bool Shader::load( const char* vert, const char* frag )
 		return false;
 	
 	Handle program = glCreateProgram();
+	m_Name = program;
 	glAttachShader(program, vertObject);
 	glAttachShader(program, fragObject);
 	BindVertexAttributes(this);
@@ -199,9 +185,9 @@ bool Shader::load( const char* vert, const char* frag )
 // 			return false;
 	}
 	
-	m_Name = program;
-	
 	updateUniformLocations();
+	
+	CheckGl();
 	
 	return true;
 }
@@ -222,6 +208,7 @@ int Shader::getUniformLocation( const char* uniformName ) const
 
 void Shader::setUniform( const char* name, int value ) const
 {
+	bind();
 	int location = getUniformLocation(name);
 	if(location != -1)
 		glUniform1i(location, value);
@@ -229,6 +216,7 @@ void Shader::setUniform( const char* name, int value ) const
 
 void Shader::setUniform( const char* name, float value ) const
 {
+	bind();
 	int location = getUniformLocation(name);
 	if(location != -1)
 		glUniform1f(location, value);
@@ -236,6 +224,7 @@ void Shader::setUniform( const char* name, float value ) const
 
 void Shader::setUniform( const char* name, int length, const float* values ) const
 {
+	bind();
 	int location = getUniformLocation(name);
 	if(location == -1)
 		return;

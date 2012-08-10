@@ -1,7 +1,8 @@
 #ifndef TEXTURE_HPP
 #define TEXTURE_HPP
 
-#include <kj/Common.h
+#include <kj/Common.h>
+#include <kj/Resource.h>
 #include <kj/Client/OpenGL.h>
 
 class Image
@@ -31,8 +32,8 @@ class Image
 
 enum TextureOptions
 {
-	TEX_MIPMAP,
-	TEX_FILTER
+	TEX_MIPMAP = (1 << 0),
+	TEX_FILTER = (1 << 1)
 };
 
 class Texture
@@ -72,6 +73,15 @@ class Texture
 		
 		Handle m_Name;
 		GLenum m_Type;
+};
+
+class TextureFile : public Resource, public Texture
+{
+	public:
+		bool load( const char* path )
+		{
+			return loadTexture2d(/*TEX_MIPMAP|TEX_FILTER*/ 0, path);
+		}
 };
 
 #endif

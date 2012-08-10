@@ -5,12 +5,13 @@
 #include <kj/Client/Model.h>
 #include <kj/Client/Window.h>
 #include <kj/Client/Camera.h>
+#include <kj/Client/Client.h>
 
 
-Camera	g_Camera;
-Handle	g_Shader;
-Map	g_Map;
-Model	g_MapModel;
+PerspectivicCamera g_Camera;
+Shader    g_Shader;
+ClientMap g_Map;
+Client    g_Client;
 
 
 void OnKeyAction( int key, int action )
@@ -23,43 +24,45 @@ void OnMouseMove()
 	// ...
 }
 
-void UpdateCamera()
-{
-	glMatrixMode(GL_PROJECTION);
-		glLoadIdentity();
-		gluPerspective(90, WindowAspect(), 0.01, 40);
-		
-		UpdateCamera(&g_Camera);
-		gluLookAt(
-			g_Camera.px, g_Camera.py, g_Camera.pz,
-			0, 0, 0,
-			g_Camera.ux, g_Camera.uy, g_Camera.uz
-		);
-	glMatrixMode(GL_MODELVIEW);
-}
-
 void OnResize()
 {
 	glViewport(0, 0, WindowWidth(), WindowHeight());
+	g_Camera.setScreen( vec2f(WindowWidth(), WindowHeight()) );
 }
 
 void OnRender()
 {
 	glClear(GL_DEPTH_BUFFER_BIT|GL_COLOR_BUFFER_BIT);
 	
-	UpdateCamera();
-	glLoadIdentity();
+	{
+		static vec3f pos(0,-3,0);
+		
+		if(KeyState('W')) pos.z += 0.1;
+		if(KeyState('S')) pos.z -= 0.1;
+		if(KeyState('A')) pos.x += 0.1;
+		if(KeyState('D')) pos.x -= 0.1;
+		if(KeyState('Q')) pos.y += 0.1;
+		if(KeyState('E')) pos.y -= 0.1;
+		
+		g_Camera.setPosition(pos);
+	}
+	
+	g_Camera.update();
+	g_Camera.upload();
 	
 	{
 		glPushMatrix();
-	
-		BindShader(g_Shader);
-		DrawModel(&g_MapModel);
+		
+		g_Shader.bind();
+		glScalef(1, 1, 1);
+		g_Map.draw();
 		
 		glPopMatrix();
 	}
 	
 	CheckGl();
+	
+	g_Client.service();
 }
 
 bool Initialize()
@@ -67,38 +70,68 @@ bool Initialize()
 	if(!CreateWindow("Dungeon", OnResize, OnRender, OnKeyAction, OnMouseMove))
 		return false;
 	
+	InitializeResourceManager();
+	RegisterResourceType<TextureFile>(RES_TEXTURE);
+	
 	glClearDepth(1);
 	glDepthFunc(GL_LEQUAL);
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_CULL_FACE);
 	
-	InitCamera(&g_Camera);
+	{
+		g_Camera.setNear(0.1);
+		g_Camera.setFar(100);
+		g_Camera.setRotation(Quaternion(vec3f(1,0,0), -tools4k::Pi*0.5));
+		g_Camera.setScreen( vec2f(WindowWidth(), WindowHeight()) );
+		g_Camera.setFov(90);
+	}
 	
 	{
-		g_Shader = LoadShader("Shader.vert", "Shader.frag");
-		if(!g_Shader)
+		if(!g_Shader.load("Shader.vert", "Shader.frag"))
 			return false;
+		g_Shader.setUniform("DiffuseMap", 0);
 		
-		CreateMap(&g_Map);
+		int myTileMap = g_Map.createTileMap();
+		TileMap* tm = g_Map.getTileMap(myTileMap);
+		tm->diffuse = (TextureFile*)LoadResource(RES_TEXTURE, "tileset.png");
+		tm->tileSize = 32;
+		tm->width = 128;
+		
+		int id = g_Map.createVoxelType("Rock");
+		VoxelType* vt = g_Map.getVoxelType(id);
+		vt->collisionShape = VCSHAPE_CUBE;
+		
+		ClientVoxelType* cvt = g_Map.getClientVoxelType(id);
+		cvt->mesh = VCSHAPE_CUBE;
+		cvt->renderMode = VRENDER_SOLID;
+		cvt->tileMap = myTileMap;
+		memset(cvt->faces, 0, sizeof(cvt->faces));
+		cvt->faces[VFACE_BACK] = 2;
+		cvt->faces[VFACE_TOP] = 3;
+		
 		Voxel voxel;
-		voxel.typeId = 0;
-		SetVoxelAt(&g_Map, 1,1,1, voxel);
+		voxel.typeId = id;
+		g_Map.setVoxel(0,0,0, voxel);
+		g_Map.setVoxel(1,1,1, voxel);
+// 		g_Map.setVoxel(9,9,9, voxel);
+// 		g_Map.setVoxel(10,10,10, voxel);
 		
-		Mesh mesh;
-		CreateMeshFromMap(&mesh, &g_Map, 0,0,0, 10,10,10);
-		CreateModel(&g_MapModel, &mesh);
-		FreeMesh(&mesh);
+		g_Map.updateModel(aabb3i(vec3i(0,0,0), vec3i(10,10,10)));
 	}
 	
 	CheckGl();
+	
+	ENetAddress address;
+	enet_address_set_host(&address, "localhost");
+	address.port = 1234;
+	g_Client.connect(&address);
+	
 	return true;
 }
 
 void Terminate()
 {
-	FreeShader(g_Shader);
-	FreeModel(&g_MapModel);
-	FreeMap(&g_Map);
+	TerminateResourceManager();
 	FreeWindow();
 }
 

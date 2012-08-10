@@ -1,0 +1,14 @@
+Dungeon/
+	client <- Client Binary
+	server <- Server Binary
+	Base/
+	Foo/
+		
+
+Pack:
+	Ein Pack ist ein Ordner, welcher Scripte und Ressourcen (Texturen, Sounds, etc.) enthält.
+	Der Server sagt dem Client beim Connecten welche Packs benötigt werden und der Client sendet, sofern alle Packs da sind, jeweil die CRC Prüfsummen zurück.
+	Beim Starten bzw beim Verbinden werden alle Scripte und Ressourcen geladen.
+
+Base:
+	Dieses Pack wird immer benötigt und wird gleich nach dem Start des Servers bzw des Clients geladen.

@@ -1,6 +1,12 @@
 #ifndef RESOURCE_HPP
 #define RESOURCE_HPP
 
+#include <kj/Common.h>
+
+enum
+{
+	RES_TEXTURE = 0
+};
 
 class Resource
 {
@@ -35,7 +41,8 @@ void TerminateResourceManager();
 /**
 	typeId can be an arbitrary number
 **/
-void RegisterResourceType( Handle typeId, ResourceAllocFn allocFn );
+template<class ResourceT>
+void RegisterResourceType( Handle typeId );
 
 /**
 	Loads a resource if its not already been loaded
@@ -49,5 +56,27 @@ Resource* LoadResource( Handle typeId, const char* filePath );
 	i.e. decrements the reference counter and deletes it if there are no references left
 **/
 void ReleaseResource( Resource* data );
+
+
+
+
+
+
+
+/// ---- impl ----
+
+void RegisterResourceType_( Handle typeId, ResourceAllocFn allocFn );
+
+template<class ResourceT>
+Resource* AllocResource()
+{
+	return new ResourceT();
+}
+
+template<class ResourceT>
+void RegisterResourceType( Handle typeId )
+{
+	RegisterResourceType_(typeId, AllocResource<ResourceT>);
+}
 
 #endif
