@@ -1,0 +1,16 @@
+RequirePackage(ZLIB)
+RequirePackage(ENet)
+RequirePackage(Tools4k)
+RequirePackage(Squirrel)
+
+
+FILE(GLOB Sources "*.?pp")
+ADD_LIBRARY(VoidCommon ${Sources})
+
+ADD_DEFINITIONS(${ENET_DEFINITIONS})
+INCLUDE_DIRECTORIES(${ZLIB_INCLUDE_DIRS} ${ENET_INCLUDE_DIR} ${Tools4k_INCLUDE_DIR} ${Squirrel_INCLUDE_DIR})
+TARGET_LINK_LIBRARIES(VoidCommon ${ZLIB_LIBRARIES} ${ENET_LIBRARIES} ${Tools4k_LIBRARY} ${Squirrel_LIBRARY})
+
+ADD_SUBDIRECTORY(Test)
+ADD_SUBDIRECTORY(Server)
+ADD_SUBDIRECTORY(Client)
