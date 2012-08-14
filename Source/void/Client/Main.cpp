@@ -25,6 +25,7 @@ class ClientEngine : public Engine, private IWindowEventListener
 		void onMouseMove( Window* wnd );
 		void onKeyAction( Window* wnd, int key, int action );
 		
+		Window m_Window;
 		Client m_Client;
 		ClientMap m_ClientMap;
 		PerspectivicCamera m_Camera;
@@ -34,15 +35,22 @@ class ClientEngine : public Engine, private IWindowEventListener
 
 ClientEngine::ClientEngine() : 
 	Engine(),
+	m_Window(this, vec2i(800,600)),
 	m_Client(),
 	m_ClientMap(),
 	m_Camera(),
 	m_Shader()
 {
+	// Setup Squirrel
+	m_Squirrel.setConst("__server__", 0);
+	m_Squirrel.setConst("__client__", 1);
 }
 
 bool ClientEngine::initialize()
 {
+	// Setup Window
+	m_Window.setName("void");
+	
 	// Connect to server
 	ENetAddress address;
 	if(enet_address_set_host(&address, "localhost") != 0)
@@ -56,8 +64,6 @@ bool ClientEngine::initialize()
 	RegisterResourceType<TextureFile>(RES_TEXTURE);
 	
 	// Setup OpenGL
-	if(!CreateWindow("void", this))
-		return false;
 	glClearDepth(1);
 	glDepthFunc(GL_LEQUAL);
 	glEnable(GL_DEPTH_TEST);
@@ -67,7 +73,7 @@ bool ClientEngine::initialize()
 	m_Camera.setNear(0.1);
 	m_Camera.setFar(100);
 	m_Camera.setRotation(Quaternion(vec3f(1,0,0), -tools4k::Pi*0.5));
-	m_Camera.setScreen( vec2f(WindowWidth(), WindowHeight()) );
+	m_Camera.setScreen(m_Window.size());
 	m_Camera.setFov(90);
 	
 	// Setup shader
@@ -92,8 +98,8 @@ bool ClientEngine::initialize()
 		cvt->renderMode = VRENDER_SOLID;
 		cvt->tileMap = myTileMap;
 		memset(cvt->faces, 0, sizeof(cvt->faces));
-		cvt->faces[VFACE_BACK] = 2;
-		cvt->faces[VFACE_TOP] = 3;
+		cvt->faces[VFACE_BACK] = 1;
+		cvt->faces[VFACE_TOP] = 4;
 		
 		Voxel voxel;
 		voxel.typeId = id;
@@ -111,13 +117,12 @@ bool ClientEngine::initialize()
 ClientEngine::~ClientEngine()
 {
 	TerminateResourceManager();
-	DestroyWindow();
 }
 
 void ClientEngine::onResizeWindow( Window* wnd )
 {
-	glViewport(0, 0, WindowWidth(), WindowHeight());
-	m_Camera.setScreen( vec2f(WindowWidth(), WindowHeight()) );
+	glViewport(0, 0, m_Window.size().x, m_Window.size().y);
+	m_Camera.setScreen(m_Window.size());
 }
 
 void ClientEngine::onMouseMove( Window* wnd )
@@ -137,12 +142,12 @@ bool ClientEngine::renderScene()
 	{
 		static vec3f pos(0,-3,0);
 		
-		if(KeyState('W')) pos.z += 0.1;
-		if(KeyState('S')) pos.z -= 0.1;
-		if(KeyState('A')) pos.x += 0.1;
-		if(KeyState('D')) pos.x -= 0.1;
-		if(KeyState('Q')) pos.y += 0.1;
-		if(KeyState('E')) pos.y -= 0.1;
+		if(m_Window.keyState('W')) pos.z += 0.1;
+		if(m_Window.keyState('S')) pos.z -= 0.1;
+		if(m_Window.keyState('A')) pos.x += 0.1;
+		if(m_Window.keyState('D')) pos.x -= 0.1;
+		if(m_Window.keyState('Q')) pos.y += 0.1;
+		if(m_Window.keyState('E')) pos.y -= 0.1;
 		
 		m_Camera.setPosition(pos);
 	}
@@ -162,7 +167,8 @@ bool ClientEngine::renderScene()
 	
 	CheckGl();
 	
-	return SwapBuffers();
+	m_Window.swapBuffers();
+	return m_Window.isOpen();
 }
 
 bool ClientEngine::onSimulate(double timeDelta)

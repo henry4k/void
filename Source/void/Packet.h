@@ -6,6 +6,8 @@
 
 #include <void/Serializer.h>
 
+class Squirrel;
+
 
 class OPacket : public Serializer
 {
@@ -18,6 +20,9 @@ class OPacket : public Serializer
 		int channel() const;
 		
 		ENetPacket* enetPacket();
+		
+		void pushToVm( Squirrel* squirrel );
+		static OPacket* GetFromVm( Squirrel* squirrel, int index );
 		
 	private:
 		int onWrite( const char* source, int length );
@@ -40,11 +45,14 @@ class IPacket : public Serializer
 		bool available( int bytes ) const;
 		
 		int pos() const;
-
+		
 		int messageId() const;
-
+		
 		int channel() const;
-	
+		
+		void pushToVm( Squirrel* squirrel );
+		static IPacket* GetFromVm( Squirrel* squirrel, int index );
+		
 	private:
 		void setPos( int pos ); // TODO: Remove this
 		

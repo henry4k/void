@@ -1,4 +1,5 @@
 #include <tools4k/Time.h>
+#include <void/Resource.h>
 #include <void/SqLoader.h>
 #include <void/Network.h>
 #include <void/Object.h>
@@ -13,10 +14,12 @@ Engine::Engine() :
 	m_CurrentTime(tools4k::RuntimeInSeconds()),
 	m_LastTime(0)
 {
+	InitializeResourceManager();
 }
 
 Engine::~Engine()
 {
+	TerminateResourceManager();
 }
 
 bool Engine::simulate()

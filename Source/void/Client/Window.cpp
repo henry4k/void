@@ -4,38 +4,9 @@
 #include <void/Client/Window.h>
 
 
-bool Running = true;
-int WindowWidth_ = 800;
-int WindowHeight_ = 600;
-int MouseX_ = 0;
-int MouseY_ = 0;
-float TimeDelta_;
-
-IWindowEventListener* WindowEventListener;
 
 
-void WindowResize( int width, int height )
-{
-	if((width == WindowWidth_) && (height && WindowHeight_))
-		return;
-	WindowWidth_ = width;
-	WindowHeight_ = height;
-	WindowEventListener->onResizeWindow(NULL);
-}
 
-void WindowKeyAction( int key, int action )
-{
-	if(action && (key == GLFW_KEY_ESC))
-		Running = false;
-	WindowEventListener->onKeyAction(NULL, key, action);
-}
-
-void WindowMouseAction( int x, int y )
-{
-	MouseX_ = x;
-	MouseY_ = y;
-	WindowEventListener->onMouseMove(NULL);
-}
 
 const char* GetGlString( GLenum property )
 {
@@ -59,39 +30,36 @@ const char* GetGlewString( GLenum property )
 	return str;
 }
 
-bool CreateWindow( const char* name, IWindowEventListener* eventListener )
+
+
+
+
+
+Window::Window( IWindowEventListener* eventListener, vec2i size ) :
+	m_EventListener(eventListener),
+	m_Size(size),
+	m_MousePos(size/2)
 {
+	if(s_Singleton)
+		Error("The faq");
+	s_Singleton = this;
+	
 	if(!glfwInit())
-	{
 		Error("Failed to initialize GLFW");
-		return false;
-	}
 	
-	if(!glfwOpenWindow(WindowWidth_, WindowHeight_, 8, 8, 8, 8, 24, 0, GLFW_WINDOW))
-	{
+	if(!glfwOpenWindow(size.x, size.y, 8, 8, 8, 8, 24, 0, GLFW_WINDOW))
 		Error("Failed to open GLFW window");
-		DestroyWindow();
-		return false;
-	}
-	
-	WindowEventListener = eventListener;
-	
-	glfwSetWindowTitle(name);
 	
 	glfwSwapInterval(1); // use vsync
 	
-	glfwSetWindowSizeCallback(WindowResize);
-	glfwSetKeyCallback(WindowKeyAction);
-	glfwSetMousePosCallback(WindowMouseAction);
+	glfwSetWindowSizeCallback(Window::OnResize);
+	glfwSetKeyCallback(Window::OnKeyAction);
+	glfwSetMousePosCallback(Window::OnMouseMove);
 	
 	glewExperimental = GL_FALSE;
 	GLenum err = glewInit();
 	if(err != GLEW_OK)
-	{
 		Error("%s", glewGetErrorString(err));
-		DestroyWindow();
-		return false;
-	}
 	
 	Log("OpenGL %s",    GetGlString(GL_VERSION));
 	Log("  Vendor: %s", GetGlString(GL_VENDOR));
@@ -107,60 +75,68 @@ bool CreateWindow( const char* name, IWindowEventListener* eventListener )
 	
 	EnableVertexArrays();
 	
-	WindowEventListener->onResizeWindow(NULL);
-	
-	return true;
+	m_EventListener->onResizeWindow(this);
 }
 
-void DestroyWindow()
+Window::~Window()
 {
 	glfwTerminate();
 }
 
-bool SwapBuffers()
+void Window::setName( const char* name )
 {
-	glfwSwapBuffers();
-	if(!glfwGetWindowParam(GLFW_OPENED))
-		Running = false;
-	return Running;
+	glfwSetWindowTitle(name);
 }
 
-float Time()
+vec2i Window::size() const
 {
-	return glfwGetTime();
+	return m_Size;
 }
 
-float TimeDelta()
+float Window::aspect() const
 {
-	return TimeDelta_;
+	return float(m_Size.x)/float(m_Size.y);
 }
 
-int WindowWidth()
+vec2i Window::mousePos() const
 {
-	return WindowWidth_;
+	return m_MousePos;
 }
 
-int WindowHeight()
-{
-	return WindowHeight_;
-}
-
-float WindowAspect()
-{
-	return float(WindowWidth_)/float(WindowHeight_);
-}
-
-int MouseX()
-{
-	return MouseX_;
-}
-
-int MouseY()
-{
-	return MouseY_;
-}
-
-int KeyState( int key )
+int Window::keyState( int key ) const
 {
 	return glfwGetKey(key);
+}
+
+void Window::swapBuffers() const
+{
+	glfwSwapBuffers();
+}
+
+bool Window::isOpen() const
+{
+	return (glfwGetWindowParam(GLFW_OPENED) == 1);
+}
+
+Window* Window::s_Singleton = NULL;
+
+void Window::OnResize( int width, int height )
+{
+	s_Singleton->m_Size.x = width;
+	s_Singleton->m_Size.y = height;
+	s_Singleton->m_EventListener->onResizeWindow(s_Singleton);
+}
+
+void Window::OnKeyAction( int key, int action )
+{
+// 	if(action && (key == GLFW_KEY_ESC))
+// 		Running = false; // TODO!
+	s_Singleton->m_EventListener->onKeyAction(s_Singleton, key, action);
+}
+
+void Window::OnMouseMove( int x, int y )
+{
+	s_Singleton->m_MousePos.x = x;
+	s_Singleton->m_MousePos.y = y;
+	s_Singleton->m_EventListener->onMouseMove(s_Singleton);
 }

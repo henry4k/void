@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdarg.h>
 #include <string.h>
+#include <list>
 #include <tools4k/Crc32.h>
 #include <void/Common.h>
 #include <void/SqLoader.h>
@@ -354,9 +355,44 @@ SQInteger fn_include(HSQUIRRELVM vm)
 
 /// ---- Squirrel ----
 
+
+struct AutoRegisterInfo
+{
+	const SQChar* name;
+	SQFUNCTION func;
+	SQInteger argCount;
+	const SQChar* typeMask;
+};
+
+std::list<AutoRegisterInfo>& AutoRegisterList()
+{
+	static std::list<AutoRegisterInfo> r;
+	return r;
+}
+
+int Squirrel::AutoRegister( const SQChar* name, SQFUNCTION func, SQInteger argCount, const SQChar* typeMask )
+{
+	AutoRegisterInfo info;
+	info.name = name;
+	info.func = func;
+	info.argCount = argCount;
+	info.typeMask = typeMask;
+	
+	AutoRegisterList().push_back(info);
+	
+	return 1;
+}
+
+
+Squirrel* Squirrel::ByHandle( HSQUIRRELVM vm )
+{
+	return (Squirrel*)sq_getforeignptr(vm);
+}
+
 Squirrel::Squirrel()
 {
 	m_Vm = sq_open(1024);
+	sq_setforeignptr(m_Vm, (SQUserPointer)this);
 	
 	sq_setprintfunc(m_Vm, fn_print, fn_error);
 	sq_setcompilererrorhandler(m_Vm, fn_compiler_error);
@@ -367,6 +403,11 @@ Squirrel::Squirrel()
 	registerFunction("loadfile", fn_loadfile, -2, ".sb");
 	registerFunction("dofile", fn_dofile, -2, ".sb");
 	registerFunction("crc32", fn_crc32, 2, ".s");
+	
+	std::list<AutoRegisterInfo>::const_iterator i = AutoRegisterList().begin();
+	for(; i != AutoRegisterList().end(); ++i)
+		registerFunction(i->name, i->func, i->argCount, i->typeMask);
+	AutoRegisterList().clear();
 }
 
 Squirrel::~Squirrel()
