@@ -2,6 +2,8 @@
 #define __ENGINE_H__
 
 
+#include <void/Squirrel.h>
+
 typedef unsigned int Tick;
 
 // static const float ServerTimestep = 0.015f; // Simulate the world every 15 milliseconds. ( = 1 Tick = 66.66 times per second. )
@@ -18,10 +20,13 @@ class Engine
 		Engine();
 		virtual ~Engine();
 
-		void simulate();
+		bool simulate();
 		
 	protected:
 		bool loadPackage( const char* name );
+		virtual bool onSimulate( double timeDelta ) = 0;
+		
+		Squirrel m_Squirrel;
 		
 	private:
 		double m_CurrentTime;

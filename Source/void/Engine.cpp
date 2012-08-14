@@ -1,6 +1,5 @@
 #include <tools4k/Time.h>
 #include <void/SqLoader.h>
-#include <void/Squirrel.h>
 #include <void/Network.h>
 #include <void/Object.h>
 #include <void/Engine.h>
@@ -10,53 +9,35 @@
 
 
 Engine::Engine() :
+	m_Squirrel(),
 	m_CurrentTime(tools4k::RuntimeInSeconds()),
 	m_LastTime(0)
 {
-// 	if(!InitSquirrel())
-// 		return false;
-// 
-// 	RegisterPacket();
-// 	RegisterObjectManager();
-// 
-// 	if(!InitObjectManager())
-// 		return false;
-// 	if(!InitNetwork())
-// 		return false;
-// 
-// 	if(!loadPackage("Base"))
-// 		return false;
 }
 
 Engine::~Engine()
 {
-// 	DeinitNetwork();
-// 	DeinitObjectManager();
-// 	DeinitSquirrel();
 }
 
-void Engine::simulate()
+bool Engine::simulate()
 {
-// 	m_LastTime = m_CurrentTime;
-// 	m_CurrentTime = RuntimeInSeconds();
-// 	double timeDelta = m_CurrentTime - m_LastTime;
-// 
-// 	NetworkService();
-// 	UpdateObjectManager();
+	m_LastTime = m_CurrentTime;
+	m_CurrentTime = tools4k::RuntimeInSeconds();
+	double timeDelta = m_CurrentTime - m_LastTime;
+	
+	return onSimulate(timeDelta);
 }
 
 bool Engine::loadPackage( const char* name )
 {
-	// TODO: Umbauen
+	// TODO: Umbauen <- Warum?
 	
-// 	HSQUIRRELVM vm = GetVm();
-// 	char* scriptFile = Concat2Strings(name,"/main.nut");
-// 
-// 	sq_pushroottable(vm);
-// 	DoFile(vm, scriptFile, false, true, 0);
-// 	sq_pop(vm, 1);
-// 
-// 	Free(scriptFile);
+	HSQUIRRELVM vm = m_Squirrel.vm();
+	std::string scriptFile = std::string(name)+"/main.nut";
+
+	sq_pushroottable(vm);
+	DoFile(vm, scriptFile.c_str(), false, true, 0);
+	sq_pop(vm, 1);
 
 	return true;
 }

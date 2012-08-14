@@ -10,10 +10,8 @@ int WindowHeight_ = 600;
 int MouseX_ = 0;
 int MouseY_ = 0;
 float TimeDelta_;
-ResizeFn   WindowResizeCb   = NULL;
-RenderFn   WindowRenderCb   = NULL;
-KeyboardFn WindowKeyboardCb = NULL;
-MouseFn    WindowMouseCb    = NULL;
+
+IWindowEventListener* WindowEventListener;
 
 
 void WindowResize( int width, int height )
@@ -22,24 +20,21 @@ void WindowResize( int width, int height )
 		return;
 	WindowWidth_ = width;
 	WindowHeight_ = height;
-	if(WindowResizeCb)
-		WindowResizeCb();
+	WindowEventListener->onResizeWindow(NULL);
 }
 
 void WindowKeyAction( int key, int action )
 {
 	if(action && (key == GLFW_KEY_ESC))
 		Running = false;
-	if(WindowKeyboardCb)
-		WindowKeyboardCb(key, action);
+	WindowEventListener->onKeyAction(NULL, key, action);
 }
 
 void WindowMouseAction( int x, int y )
 {
 	MouseX_ = x;
 	MouseY_ = y;
-	if(WindowMouseCb)
-		WindowMouseCb();
+	WindowEventListener->onMouseMove(NULL);
 }
 
 const char* GetGlString( GLenum property )
@@ -64,7 +59,7 @@ const char* GetGlewString( GLenum property )
 	return str;
 }
 
-bool CreateWindow( const char* name, ResizeFn resizeFn, RenderFn renderFn, KeyboardFn keyboardFn, MouseFn mouseFn )
+bool CreateWindow( const char* name, IWindowEventListener* eventListener )
 {
 	if(!glfwInit())
 	{
@@ -75,21 +70,11 @@ bool CreateWindow( const char* name, ResizeFn resizeFn, RenderFn renderFn, Keybo
 	if(!glfwOpenWindow(WindowWidth_, WindowHeight_, 8, 8, 8, 8, 24, 0, GLFW_WINDOW))
 	{
 		Error("Failed to open GLFW window");
-		FreeWindow();
+		DestroyWindow();
 		return false;
 	}
 	
-	if(!renderFn)
-	{
-		Error("No render function supplied");
-		FreeWindow();
-		return false;
-	}
-	
-	WindowRenderCb   = renderFn;
-	WindowResizeCb   = resizeFn;
-	WindowKeyboardCb = keyboardFn;
-	WindowMouseCb    = mouseFn;
+	WindowEventListener = eventListener;
 	
 	glfwSetWindowTitle(name);
 	
@@ -104,7 +89,7 @@ bool CreateWindow( const char* name, ResizeFn resizeFn, RenderFn renderFn, Keybo
 	if(err != GLEW_OK)
 	{
 		Error("%s", glewGetErrorString(err));
-		FreeWindow();
+		DestroyWindow();
 		return false;
 	}
 	
@@ -122,38 +107,22 @@ bool CreateWindow( const char* name, ResizeFn resizeFn, RenderFn renderFn, Keybo
 	
 	EnableVertexArrays();
 	
-	if(WindowResizeCb)
-		WindowResizeCb();
+	WindowEventListener->onResizeWindow(NULL);
 	
 	return true;
 }
 
-void FreeWindow()
+void DestroyWindow()
 {
 	glfwTerminate();
 }
 
-void RunGameLoop()
+bool SwapBuffers()
 {
-	double lastTime = glfwGetTime();
-	while(Running)
-	{
-		double curTime = glfwGetTime();
-		TimeDelta_ = curTime - lastTime;
-		lastTime = curTime;
-		
-		WindowRenderCb();
-		
-		glfwSwapBuffers();
-		
-		if(!glfwGetWindowParam(GLFW_OPENED))
-			Running = false;
-	}
-}
-
-void StopGameLoop()
-{
-	Running = false;
+	glfwSwapBuffers();
+	if(!glfwGetWindowParam(GLFW_OPENED))
+		Running = false;
+	return Running;
 }
 
 float Time()

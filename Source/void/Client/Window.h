@@ -1,15 +1,24 @@
 #ifndef WINDOW_HPP
 #define WINDOW_HPP
 
-typedef void (*ResizeFn)();
-typedef void (*RenderFn)();
-typedef void (*KeyboardFn)( int key, int action );
-typedef void (*MouseFn)();
+class Window
+{
+	public:
+		// ...
+};
 
-bool CreateWindow( const char* name, ResizeFn resizeFn, RenderFn renderFn, KeyboardFn keyboardFn, MouseFn mouseFn );
-void FreeWindow();
-void RunGameLoop();
-void StopGameLoop();
+class IWindowEventListener
+{
+	public:
+		virtual void onResizeWindow( Window* wnd ) = 0;
+		virtual void onMouseMove( Window* wnd ) = 0;
+		virtual void onKeyAction( Window* wnd, int key, int action ) = 0;
+};
+
+bool CreateWindow( const char* name, IWindowEventListener* eventListener );
+void DestroyWindow();
+
+bool SwapBuffers();
 
 float Time();
 float TimeDelta();
