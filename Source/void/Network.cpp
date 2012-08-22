@@ -7,22 +7,26 @@
 static const ClientInfo InvalidClientInfo;
 
 
-ClientInfo::ClientInfo()
+ClientInfo::ClientInfo( int slot ) :
+	m_Slot(slot)
 {
 	reset();
 }
 
-void ClientInfo::activate( int slot )
+void ClientInfo::activate( std::string name )
 {
 	m_Active = true;
-	m_Slot = slot;
+	m_Name = name;
+	
+	Log("Activated #%d alias \"%s\"", m_Slot, m_Name.c_str());
 }
 
 void ClientInfo::reset()
 {
 	m_Active = false;
-	m_Slot = InvalidSlot;
 	m_Name = "InvalidClient";
+	
+	Log("Reset #%d", m_Slot);
 }
 
 bool ClientInfo::isActive() const
@@ -49,7 +53,13 @@ Network::Network() :
 	m_Host(NULL)
 {
 	if(enet_initialize() != 0)
-		Error("An error occurred while initializing network.\n");
+		Error("An error occurred while initializing network.");
+	
+	m_ClientInfos.resize(ClientHardLimit);
+	for(int i = 0; i < m_ClientInfos.size(); ++i)
+	{
+		m_ClientInfos[i] = ClientInfo(i);
+	}
 }
 
 Network::~Network()
@@ -74,8 +84,7 @@ const ClientInfo* Network::clientInfoBySlot( int slot ) const
 
 ClientInfo* Network::clientInfoBySlot( int slot )
 {
-	if(m_ClientInfos.size() <= slot)
-		m_ClientInfos.resize(slot+1);
+	assert(tools4k::InsideArray(slot, m_ClientInfos.size()));
 	return &m_ClientInfos[slot];
 }
 
@@ -89,3 +98,14 @@ int Network::nextClientSlot( int i )
 	}
 	return InvalidSlot;
 }
+
+SQInteger Network::fn_SetPacketCallback( HSQUIRRELVM vm ) // env, fun
+{
+	HSQOBJECT env;
+	HSQOBJECT fun;
+	sq_getstackobj(vm, 2, &env);
+	sq_getstackobj(vm, 3, &fun);
+	Singleton<Network>()->m_PacketCallback = SquirrelFunction(vm, env, fun);
+	return 0;
+}
+RegisterSqFunction(SetPacketCallback, Network::fn_SetPacketCallback, 3, "...");

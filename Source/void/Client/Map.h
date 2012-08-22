@@ -1,26 +1,21 @@
 #ifndef CLIENT_MAP_HPP
 #define CLIENT_MAP_HPP
 
-#include <tools4k/Vector.h>
-#include <tools4k/Aabb.h>
-
 #include <void/Map.h>
+#include <void/Singleton.h>
 #include <void/Client/Model.h>
 #include <void/Client/Texture.h>
 
-using tools4k::vec3i;
-using tools4k::aabb3i;
-
 enum VoxelRendering
 {
-	VRENDER_INVISIBLE = 0, // No vertices will be generated
+	VRENDER_INVISIBLE, // No vertices will be generated
 	VRENDER_SOLID,         // No transparency
 	VRENDER_ALPHA          // ...
 };
 
 enum VoxelFace
 {
-	VFACE_NONE = 0,
+	VFACE_NONE,
 	VFACE_FRONT,
 	VFACE_BACK,
 	VFACE_TOP,
@@ -37,7 +32,7 @@ struct TileMap
 	TileMap();
 	~TileMap();
 	
-	TextureFile* diffuse;
+	Texture2dFile* diffuse;
 	
 	int width;
 	int tileSize;
@@ -57,7 +52,7 @@ struct ClientVoxelType
 	int faces[VFACE_COUNT];
 };
 
-class ClientMap : public Map
+class ClientMap : public Map, public SingletonClass<ClientMap>
 {
 	public:
 		ClientMap();

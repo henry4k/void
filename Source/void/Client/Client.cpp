@@ -1,13 +1,12 @@
 #include <void/Common.h>
 #include <void/Packet.h>
+#include <void/Client/Object.h>
 #include <void/Client/Client.h>
 
 
-
-
-
 Client::Client() :
-	m_ServerPeer(NULL)
+	m_ServerPeer(NULL),
+	m_LocalClientSlot(InvalidSlot)
 {
 	m_Host = enet_host_create(
 		NULL, // create a client host
@@ -34,15 +33,54 @@ void Client::service()
 		{
 			case ENET_EVENT_TYPE_RECEIVE:
 			{
-				Log("Channel=%u [%s]\n",
-					event.channelID,
-					(const char*)event.packet->data
-				);
-				
 				IPacket p(event.channelID, event.packet);
-				std::string text = p.readString("Text");
-				int number = p.read<Int32>("Number");
-				Log("Packet: text('%s') number(%d)", text.c_str(), number);
+				switch(p.messageId())
+				{
+					case SM_LoginResponse:
+					{
+						int slot = p.read<Int32>("Slot");
+						m_LocalClientSlot = slot;
+					} break;
+					
+					case SM_ClientList:
+					{
+						while(p.available(sizeof(Int32)))
+						{
+							int slot = p.read<Int32>("Slot");
+							std::string name = p.readString("Name");
+							clientInfoBySlot(slot)->activate(name);
+						}
+					} break;
+					
+					case SM_ClientConnected:
+					{
+						int slot = p.read<Int32>("Slot");
+						std::string name = p.readString("Name");
+						clientInfoBySlot(slot)->activate(name);
+					} break;
+					
+					case SM_ClientDisconnected:
+					{
+						int slot = p.read<Int32>("Slot");
+						ClientInfo* ci = clientInfoBySlot(slot);
+						ci->reset();
+					} break;
+					
+					case SM_ObjectUpdate:
+					{
+						Singleton<ClientObjectManager>()->readUpdate(&p);
+					} break;
+					
+					default:
+					{
+						// Wenn sonst nix passt wirds ans Script geleitet
+						m_PacketCallback.prepareCall();
+// 						p.pushHandle();
+						m_PacketCallback.executeCall(0, false, true);
+						
+// 						Error("Got unknown network message");
+					}
+				}
 				
 				enet_packet_destroy(event.packet);
 			} break;
@@ -70,7 +108,7 @@ bool Client::connect( const ENetAddress* address )
 		return false;
 	}
 	
-	m_ServerPeer = enet_host_connect(m_Host, address, ChannelCount, 0);    
+	m_ServerPeer = enet_host_connect(m_Host, address, ChannelCount, 0);
 	if(m_ServerPeer == NULL)
 	{
 		Log("No available peers for initiating an connection.\n");
@@ -82,6 +120,12 @@ bool Client::connect( const ENetAddress* address )
 	if((enet_host_service(m_Host, &event, ConnectTimeout) > 0) && (event.type == ENET_EVENT_TYPE_CONNECT))
 	{
 		Log("Connected!\n");
+		
+		// Send login request
+		OPacket p(StuffChannel, CM_LoginRequest, 0);
+		p.write("Name", std::string("Wiff"));
+		sendPacket(&p);
+		
 		return true;
 	}
 	else
@@ -148,3 +192,12 @@ void Client::sendPacket( OPacket* packet )
 	enet_peer_send(m_ServerPeer, packet->channel(), packet->enetPacket());
 	// enet_host_flush(m_Host);
 }
+
+SQInteger fn_SendPacket( HSQUIRRELVM vm ) // packet
+{
+	OPacket* p = OPacket::GetHandle(2);
+	
+	Singleton<Client>()->sendPacket(p);
+	return 0;
+}
+RegisterSqFunction(SendPacket, fn_SendPacket, 2, ".p");

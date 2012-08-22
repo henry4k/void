@@ -1,0 +1,28 @@
+-- Dokusystem:
+Script Doku wird vom Script selbst erstellt.
+z.B. so:
+function CreatePlayer( name, position )
+{
+	// ...
+}
+::doc(CreatePlayer, @"
+	Creates and initilizes a new player.
+	@param name string, The players name
+	@param position Vector, Where it is spawned
+	@return Player The player object or null if something went wrong
+");
+
+--
+
+
+
+Client/Server
+	- X Client connect/disconnect Events
+	- X Client Login-Nachricht
+	- X Initial die Client-Liste senden
+	- X Reguläre Updates senden
+	- X Komplett-Update für neue Clients senden
+	- O Script Dokumentation
+	- O Script Nachrichten
+		I/OPacket sind ja schon im Script verfügbar,
+		fehlt nur noch eine Send/Broadcast Funktion sowie ein Weg das ganz auch zu empfangen. :)

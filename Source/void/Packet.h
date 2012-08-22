@@ -12,17 +12,39 @@ class Squirrel;
 class OPacket : public Serializer
 {
 	public:
+		/**
+		 * @see channel()
+		 * @see ClientMessage
+		 * @see ServerMessage
+		 * ...
+		 */
 		OPacket( int channel, int messageId, int flags );
 		virtual ~OPacket();
 		
 		int length() const;
 		
+		/**
+		 * The enet channel on that this packet should be send.
+		 * @see Channel 
+		 */
 		int channel() const;
 		
+		/**
+		 * Finalizes the packet buffer and creates the enetPacket.
+		 * May be called multiple times.
+		 */
 		ENetPacket* enetPacket();
 		
-		void pushToVm( Squirrel* squirrel );
-		static OPacket* GetFromVm( Squirrel* squirrel, int index );
+		/**
+		 * Pushes this a user pointer in the script vm.
+		 */
+		void pushHandle();
+		
+		/**
+		 * Retrieves the user poiter at the specified position from the vm.
+		 * Note that this is no strong reference!
+		 */
+		static OPacket* GetHandle( int index );
 		
 	private:
 		int onWrite( const char* source, int length );
@@ -46,12 +68,28 @@ class IPacket : public Serializer
 		
 		int pos() const;
 		
+		/**
+		 * @see ClientMessage
+		 * @see ServerMessage
+		 */
 		int messageId() const;
 		
+		/**
+		 * The enet channel on which this packet was received.
+		 * @see Channel
+		 */
 		int channel() const;
 		
-		void pushToVm( Squirrel* squirrel );
-		static IPacket* GetFromVm( Squirrel* squirrel, int index );
+		/**
+		 * Pushes this a user pointer in the script vm.
+		 */
+		void pushHandle();
+		
+		/**
+		 * Retrieves the user poiter at the specified position from the vm.
+		 * Note that this is no strong reference!
+		 */
+		static IPacket* GetHandle( int index );
 		
 	private:
 		void setPos( int pos ); // TODO: Remove this

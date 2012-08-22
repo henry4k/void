@@ -12,9 +12,21 @@ function include( file )
 include("Object.nut");
 
 
+/// ---- Packet Test ----
 
 
-
+// if(__client__)
+// {
+// 	local op = CreateOPacket(0, 42);
+// 	PacketWrite(op, "Test", 'i', 42);
+// 	SendPacket(op);
+// }
+// 
+// function PacketCallback( ... )
+// {
+// 	::print("Received packet!\n");
+// }
+// SetPacketCallback(this, PacketCallback);
 
 
 /// ---- Object Test ----
@@ -51,10 +63,21 @@ class LaserPistol extends Pistol
 	}
 }
 
+if(__client__)
+function LaserPistol::DeserializeVar( ipacket )
+{
+	base.DeserializeVar(ipacket);
+	::print("Ammo = "+Ammo.Get()+"\n");
+	::print("Energy = "+Energy.Get()+"\n");
+}
 
 
-MyPistol <- LaserPistol()
-MyPistol.Fire()
+if(__server__)
+{
+	MyPistol <- LaserPistol()
+	MyPistol.Fire()
+	MyPistol.Energy.Set(42)
+}
 
 return;
 

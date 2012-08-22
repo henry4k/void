@@ -12,7 +12,7 @@ Serializer::Serializer() :
 
 std::string Serializer::getTrace() const
 {
-	const int maxLength = 64;
+	const int maxLength = 9999; //64;
 	
 	int length;
 	std::string info;

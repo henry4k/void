@@ -136,7 +136,7 @@ ClientMap::~ClientMap()
 	std::vector<TileMap>::const_iterator i = m_TileMaps.begin();
 	for(; i != m_TileMaps.end(); i++)
 		if(i->diffuse)
-			ReleaseResource(i->diffuse);
+			Singleton<ResourceManager>()->releaseResource(i->diffuse);
 }
 
 
@@ -262,7 +262,7 @@ bool ClientMap::createMesh( Mesh* mesh, int tileMap, aabb3i cube ) const
 	{
 		ctx.absolute = cube.min + ctx.offset;
 		
-		ctx.voxel = getVoxel(ctx.absolute.x,ctx.absolute.y,ctx.absolute.z);
+		ctx.voxel = getVoxel(ctx.absolute);
 		if(ctx.voxel.typeId == VoxelType::InvalidId)
 			continue;
 		

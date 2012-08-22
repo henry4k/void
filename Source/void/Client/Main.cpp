@@ -19,7 +19,7 @@ class ClientEngine : public Engine, private IWindowEventListener
 		
 	private:
 		bool renderScene();
-		bool onSimulate( double timeDelta );
+		bool onUpdate( double timeDelta );
 		
 		void onResizeWindow( Window* wnd );
 		void onMouseMove( Window* wnd );
@@ -27,6 +27,7 @@ class ClientEngine : public Engine, private IWindowEventListener
 		
 		Window m_Window;
 		Client m_Client;
+		ClientObjectManager m_ObjectManager;
 		ClientMap m_ClientMap;
 		PerspectivicCamera m_Camera;
 		Shader m_Shader;
@@ -37,6 +38,7 @@ ClientEngine::ClientEngine() :
 	Engine(),
 	m_Window(this, vec2i(800,600)),
 	m_Client(),
+	m_ObjectManager(),
 	m_ClientMap(),
 	m_Camera(),
 	m_Shader()
@@ -60,8 +62,7 @@ bool ClientEngine::initialize()
 		return false;
 	
 	// Setup Resource Manager
-	InitializeResourceManager();
-	RegisterResourceType<TextureFile>(RES_TEXTURE);
+	m_ResourceManager.registerResourceType<Texture2dFile>(RES_TEXTURE2D);
 	
 	// Setup OpenGL
 	glClearDepth(1);
@@ -85,7 +86,7 @@ bool ClientEngine::initialize()
 	{
 		int myTileMap = m_ClientMap.createTileMap();
 		TileMap* tm = m_ClientMap.getTileMap(myTileMap);
-		tm->diffuse = (TextureFile*)LoadResource(RES_TEXTURE, "tileset.png");
+		tm->diffuse = (Texture2dFile*)m_ResourceManager.loadResource(RES_TEXTURE2D, "tileset.png");
 		tm->tileSize = 32;
 		tm->width = 128;
 		
@@ -103,20 +104,20 @@ bool ClientEngine::initialize()
 		
 		Voxel voxel;
 		voxel.typeId = id;
-		m_ClientMap.setVoxel(0,0,0, voxel);
-		m_ClientMap.setVoxel(1,1,1, voxel);
-// 		m_ClientMap.setVoxel(9,9,9, voxel);
-// 		m_ClientMap.setVoxel(10,10,10, voxel);
+		m_ClientMap.setVoxel(vec3i(0,0,0), voxel);
+		m_ClientMap.setVoxel(vec3i(1,1,1), voxel);
 		
 		m_ClientMap.updateModel(aabb3i(vec3i(0,0,0), vec3i(10,10,10)));
 	}
+	
+	if(!loadPackage("Base"))
+		return false;
 	
 	return true;
 }
 
 ClientEngine::~ClientEngine()
 {
-	TerminateResourceManager();
 }
 
 void ClientEngine::onResizeWindow( Window* wnd )
@@ -171,11 +172,12 @@ bool ClientEngine::renderScene()
 	return m_Window.isOpen();
 }
 
-bool ClientEngine::onSimulate(double timeDelta)
+bool ClientEngine::onUpdate(double timeDelta)
 {
 	m_Client.service();
 	if(!renderScene())
 		return false;
+	m_ObjectManager.update();
 	return true;
 }
 
@@ -186,7 +188,7 @@ int main( int argc, char* argv[] )
 	ClientEngine engine;
 	if(!engine.initialize())
 		return 0;
-	while(engine.simulate())
+	while(engine.update())
 		;
 	return 0; 
 }

@@ -1,16 +1,24 @@
-#ifndef MAP_HPP
-#define MAP_HPP
+#ifndef __VOID_MAP_H__
+#define __VOID_MAP_H__
 
 #include <stdint.h>
 #include <map>
 #include <vector>
 #include <string>
+
+#include <tools4k/Vector.h>
+#include <tools4k/Aabb.h>
+
 #include <void/Common.h>
+#include <void/Singleton.h>
+
+using tools4k::vec3i;
+using tools4k::aabb3i;
 
 
 enum VoxelCollisionShapes
 {
-	VCSHAPE_NONE = 0, // This voxel is empty
+	VCSHAPE_NONE, // This voxel is empty
 	VCSHAPE_CUBE      // This voxel is a cube
 };
 
@@ -45,21 +53,50 @@ struct Voxel
 
 class VoxelChunk;
 
-class Map
+class Map : public SingletonClass<Map>
 {
 	public:
 		Map();
 		~Map();
 		
-		Voxel getVoxel(int x, int y, int z) const;
-		void setVoxel(int x, int y, int z, Voxel voxel);
+		/**
+		 * Reads a voxel at the given coordinates.
+		 * When the voxel does not exist (i.e. there is no chunk created yet)
+		 * this function returns InvalidVoxel.
+		 * InvalidVoxel is an internal voxel that has the type InvalidVoxelType (-1).
+		 * @see getVoxelType()
+		 * @see setVoxel()
+		 */
+		Voxel getVoxel( vec3i pos ) const;
+
+		/**
+		 * Sets the voxel at the given coordinates.
+		 */
+		void setVoxel( vec3i pos, Voxel voxel );
 		
-		
-		int getFreeVoxelType() const;
+		/**
+		 * Returns the next free voxel type id.
+		 * This value stays constant between calls to createVoxelType().
+		 * Will return VoxelType::InvalidId when no ids are left.
+		 */
+		int getFreeVoxelType() const; // TODO: Warum ist das eigentlich öffentlich? Irgendwie braucht man ja nur createVoxelType() ...
+
+		/**
+		 * Allocates a new type. // <- Bad english :(
+		 * When id is VoxelType::InvalidId a new type id is generated.
+		 */
 		virtual int createVoxelType( const char* name, int id = VoxelType::InvalidId );
 		
+		/**
+		 * Returns the id that is associated with this name
+		 * or VoxelType::InvalidId when there is no voxel with that name.
+		 */
 		int getTypeIdByName( const char* name ) const;
 		
+		/**
+		 * Returns the voxel type structure
+		 * or NULL when something went wrong.
+		 */
 		VoxelType* getVoxelType( int typeId );
 		const VoxelType* getVoxelType( int typeId ) const;
 		
@@ -72,11 +109,5 @@ class Map
 		
 		std::map<uint64_t,VoxelChunk*> m_Chunks;
 };
-
-
-
-
-
-
 
 #endif

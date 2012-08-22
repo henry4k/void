@@ -116,17 +116,17 @@ SQInteger ReleaseOPacket( SQUserPointer up, SQInteger size )
 	return 1;
 }
 
-void OPacket::pushToVm( Squirrel* squirrel )
+void OPacket::pushHandle()
 {
-	HSQUIRRELVM vm = squirrel->vm();
+	HSQUIRRELVM vm = Singleton<Squirrel>()->vm();
 	sq_pushuserpointer(vm, this);
 	sq_setreleasehook(vm, -1, ReleaseOPacket);
 }
 
-OPacket* OPacket::GetFromVm( Squirrel* squirrel, int index )
+OPacket* OPacket::GetHandle( int index )
 {
 	OPacket* p = NULL;
-	sq_getuserpointer(squirrel->vm(), index, (SQUserPointer*)&p);
+	sq_getuserpointer(Singleton<Squirrel>()->vm(), index, (SQUserPointer*)&p);
 	return p;
 }
 
@@ -137,10 +137,10 @@ SQInteger fn_CreateOPacket( HSQUIRRELVM vm ) // channel, messageId
 	sq_getinteger(vm, 3, &messageId);
 	
 	OPacket* p = new OPacket(channel, messageId, 0);
-	p->pushToVm(Squirrel::ByHandle(vm));
+	p->pushHandle();
 	return 1;
 }
-RegisterSqFunction(CreateOPacket, 3, ".ii");
+RegisterSqFunction(CreateOPacket, fn_CreateOPacket, 3, ".ii");
 
 /**
 	bB char
@@ -151,7 +151,7 @@ RegisterSqFunction(CreateOPacket, 3, ".ii");
 **/
 SQInteger fn_PacketWrite( HSQUIRRELVM vm ) // opacket, name, type, value
 {
-	OPacket* p = OPacket::GetFromVm(Squirrel::ByHandle(vm), 2);
+	OPacket* p = OPacket::GetHandle(2);
 	
 	const SQChar* name;
 	sq_getstring(vm, 3, &name);
@@ -204,7 +204,7 @@ SQInteger fn_PacketWrite( HSQUIRRELVM vm ) // opacket, name, type, value
 	
 	return 0;
 }
-RegisterSqFunction(PacketWrite, 5, ".psi.");
+RegisterSqFunction(PacketWrite, fn_PacketWrite, 5, ".psi.");
 
 
 
@@ -215,17 +215,17 @@ SQInteger ReleaseIPacket( SQUserPointer up, SQInteger size )
 	return 1;
 }
 
-void IPacket::pushToVm( Squirrel* squirrel )
+void IPacket::pushHandle()
 {
-	HSQUIRRELVM vm = squirrel->vm();
+	HSQUIRRELVM vm = Singleton<Squirrel>()->vm();
 	sq_pushuserpointer(vm, this);
 	sq_setreleasehook(vm, -1, ReleaseIPacket);
 }
 
-IPacket* IPacket::GetFromVm( Squirrel* squirrel, int index )
+IPacket* IPacket::GetHandle( int index )
 {
 	IPacket* p = NULL;
-	sq_getuserpointer(squirrel->vm(), index, (SQUserPointer*)&p);
+	sq_getuserpointer(Singleton<Squirrel>()->vm(), index, (SQUserPointer*)&p);
 	return p;
 }
 
@@ -238,7 +238,7 @@ IPacket* IPacket::GetFromVm( Squirrel* squirrel, int index )
 **/
 SQInteger fn_PacketRead( HSQUIRRELVM vm ) // ipacket, name, type
 {
-	IPacket* p = IPacket::GetFromVm(Squirrel::ByHandle(vm), 2);
+	IPacket* p = IPacket::GetHandle(2);
 	
 	const SQChar* name;
 	sq_getstring(vm, 3, &name);
@@ -274,4 +274,4 @@ SQInteger fn_PacketRead( HSQUIRRELVM vm ) // ipacket, name, type
 	
 	return 1;
 }
-RegisterSqFunction(PacketRead, 4, ".psi");
+RegisterSqFunction(PacketRead, fn_PacketRead, 4, ".psi");

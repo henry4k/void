@@ -6,5 +6,5 @@ MACRO(AddTest Name)
 # 	SET_PROPERTY(TARGET "test${Name}" PROPERTY COMPILE_DEFINITIONS "PX_TEST_NAME" "${Name}")
 ENDMACRO()
 
-AddTest(Resource VoidCommon)
 AddTest(Map VoidCommon)
+AddTest(Singleton VoidCommon)

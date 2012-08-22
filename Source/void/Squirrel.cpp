@@ -422,6 +422,8 @@ HSQUIRRELVM Squirrel::vm() const
 
 void Squirrel::registerFunction( const SQChar* name, SQFUNCTION func, SQInteger argCount, const SQChar* typeMask )
 {
+	Log("Func: %s()", name);
+	
 	sq_pushroottable(m_Vm);
 	
 	sq_pushstring(m_Vm, name, -1);
@@ -435,6 +437,8 @@ void Squirrel::registerFunction( const SQChar* name, SQFUNCTION func, SQInteger 
 
 void Squirrel::setConst( const SQChar* name, int v )
 {
+	Log("Const: %s = %d", name, v);
+	
 	sq_pushconsttable(m_Vm);
 	
 	sq_pushstring(m_Vm, name, -1);

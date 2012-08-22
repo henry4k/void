@@ -5,6 +5,7 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <assert.h>
 
 #include <tools4k/Common.h>
 #include <tools4k/Logic.h>
@@ -36,5 +37,8 @@ const int MaxPathLength = 256;
 const int MaxNameLength = 64;
 
 typedef unsigned int Handle;
+
+// ^- Don't use these anymore!
+// TODO: Remove that crap!
 
 #endif

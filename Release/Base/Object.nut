@@ -10,43 +10,49 @@ enum ObjectCommand
 	End
 }
 
+
+/// ---- ObjectType ----
+
 ObjectTypes <- [];
 class ObjectType
 {
 	Id = 0;
 	Class = null;
 	Name_ = null;
+}
 	
-	function constructor( classObject, name = null )
+function ObjectType::constructor( classObject, name = null )
+{
+	// Code wird auf Client und Server in gleicher Reihenfolge ausgeführt,
+	// entsprechend haben die Objekt-Typen auch die gleiche Reihenfolge.
+	
+	if(name)
 	{
-		// Code wird auf Client und Server in gleicher Reihenfolge ausgeführt,
-		// entsprechend haben die Objekt-Typen auch die gleiche Reihenfolge.
-		
-		if(name)
+		foreach(v in ::ObjectTypes)
 		{
-			foreach(v in ::ObjectTypes)
+			if(v.Name_ == name)
 			{
-				if(v.Name_ == name)
-				{
-					::print("An object type with this name already exists\n");
-					::assert(false);
-				}
+				::print("An object type with this name already exists\n");
+				::assert(false);
 			}
 		}
-		
-		::ObjectTypes.append(this);
-		
-		Id = ::ObjectTypes.len()-1;
-		Class = classObject.weakref(); // Warum weakref?
-		Name_ = name;
 	}
 	
-	function Name()
-	{
-		return (Name_)?(Name_):(Id.tostring());
-	}
+	::ObjectTypes.append(this);
+	
+	Id = ::ObjectTypes.len()-1;
+	Class = classObject.weakref(); // Warum weakref?
+	Name_ = name;
+}
+	
+function ObjectType::Name()
+{
+	return (Name_)?(Name_):(Id.tostring());
 }
 
+
+
+/// ---- NetVar ----
 
 class NetVar
 {
@@ -54,107 +60,133 @@ class NetVar
 	Target = null;
 	Name_ = null;
 	Id = null;
-	
-	function constructor( value, target = null, name = null )
-	{
-		Value = value;
-		Target = target;
-		Name_ = name;
-		Id = Target.RegisterNetVar(this);
-		// Kein Target.SetDirty() nötig, weil der Konstruktor garantiert
-		// auf beiden Seiten (mit den gleichen Werten) aufgerufen wird!
-	}
-	
-	function Serialize()
-	{
-// 		::PacketWrite(opacket,"Command",'B',ObjectCommand.Update);
-// 		::PacketWrite(opacket,"VarId",'B',Id);
-	}
-	
-	function Name()
-	{
-		return (Name_)?(Name_):(Id.tostring());
-	}
-	
-	
-	// Für PoD-Typen:
-	
-	function Set( v )
-	{
-		Value = v;
-		Target.SetDirty();
-	}
-	
-	function Get()
-	{
-		return Value;
-	}
-	
-	function Inc()
-	{
-		Value++;
-		Target.SetDirty();
-	}
-	
-	function Dec()
-	{
-		Value--;
-		Target.SetDirty();
-	}
 }
 
+function NetVar::constructor( value, target = null, name = null )
+{
+	Value = value;
+	Target = target;
+	Name_ = name;
+	Id = Target.RegisterNetVar(this);
+	// Kein Target.SetDirty() nötig, weil der Konstruktor garantiert
+	// auf beiden Seiten (mit den gleichen Werten) aufgerufen wird!
+}
+	
+function NetVar::Name()
+{
+	return (Name_)?(Name_):(Id.tostring());
+}
+	
+	
+// Für PoD-Typen:
+
+function NetVar::Set( v )
+{
+	Value = v;
+	if(__server__)
+		Target.SetDirty();
+}
+
+function NetVar::Get()
+{
+	return Value;
+}
+
+function NetVar::Inc()
+{
+	Value++;
+	if(__server__)
+		Target.SetDirty();
+}
+
+function NetVar::Dec()
+{
+	Value--;
+	if(__server__)
+		Target.SetDirty();
+}
+
+if(__server__)
+function NetVar::Serialize( opacket, startTick )
+{
+	::print("NetVar::Serialize\n");
+	::PacketWrite(opacket,"Command",'B',ObjectCommand.Update);
+	::PacketWrite(opacket,"VarId",'B',Id);
+	::PacketWrite(opacket,"Value",'i',Value);
+}
+
+if(__client__)
+function NetVar::Deserialize( ipacket )
+{
+	::print("NetVar::Deserialize\n");
+	Value = ::PacketRead(ipacket,"Value",'i');
+}
+
+
+
+
+/// ---- Object ----
 
 class Object
 {
 	Handle = null;
 	NetVars = null;
-	
-	function constructor()
-	{
-		Handle = ::CreateObject(Type.Id, this);
-		NetVars = [];
-	}
-	
-	function _inherited( attributes )
-	{
-		this.Type <- ::ObjectType(this, ("name" in attributes)?(attributes.name):(null));
-	}
+}
 
-	function IsValid()
-	{
-		return (Handle != null);
-	}
+function Object::_inherited( attributes )
+{
+	this.Type <- ::ObjectType(this, ("name" in attributes)?(attributes.name):(null));
+}
 
-	function Id()
+function Object::IsValid()
+{
+	return (Handle != null);
+}
+
+function Object::Id()
+{
+	if(!IsValid())
+		return null;
+	else
+		return ::ObjectGetId(Handle);
+}
+
+function Object::Name()
+{
+	return Id().tostring()+":"+Type.Name();
+}
+
+function Object::RegisterNetVar( nv )
+{
+	if(nv.Name_)
 	{
-		if(!IsValid())
-			return null;
-		else
-			return ::ObjectGetId(Handle);
+		foreach(v in NetVars)
+			::assert(v.Name_ != nv.Name_)
 	}
 	
-	function Name()
-	{
-		return Id().tostring()+":"+Type.Name();
-	}
+	NetVars.append(nv);
 	
-	function RegisterNetVar( nv )
-	{
-		if(nv.Name_)
-		{
-			foreach(v in NetVars)
-				::assert(v.Name_ != nv.Name_)
-		}
-		
-		NetVars.append(nv);
-		
-		return NetVars.len()-1;
-	}
-	
-	function SetDirty()
-	{
-		::ObjectSetDirty(Handle);
-	}
+	return NetVars.len()-1;
+}
+
+if(__server__)
+function Object::constructor()
+{
+	Handle = ::CreateObject(Type.Id, this);
+	NetVars = [];
+}
+
+if(__client__)
+function Object::constructor()
+{
+	::assert(Handle != null);
+	NetVars = [];
+}
+
+if(__server__)
+function Object::SetDirty()
+{
+	::ObjectSetDirty(Handle);
 }
 
 if(__server__)
@@ -167,42 +199,61 @@ function Object::Remove()
 }
 
 if(__server__)
-function Object::SerializeVariables( opacket, startTick )
+function Object::Serialize( opacket, startTick )
 {
 	::print(Name()+": Serializing script variables ..\n");
 	foreach(i,nv in NetVars)
 	{
 		nv.Serialize(opacket, startTick);
 	}
-	
-// 	::PacketWrite(opacket,"Command",'B',ObjectCommand.Update);
-// 	::PacketWrite(opacket,"VarName",'s',"Foo");
-// 	::PacketWrite(opacket,"Value",'i',4000);
-// 	
-// 	::PacketWrite(opacket,"Command",'B',ObjectCommand.Update);
-// 	::PacketWrite(opacket,"VarName",'s',"Bar");
-// 	::PacketWrite(opacket,"Value",'i',8000);
 }
 
+if(__client__)
+function Object::DeserializeVar( ipacket )
+{
+	::print(Name()+": Deserializing script variable ..\n");
+	
+	local varId = ::PacketRead(ipacket,"VarId",'B');
+	NetVars[varId].Deserialize(ipacket);
+}
 
 
 
 /// ---- Callbacks ----
 
 if(__server__)
-function OnSerializeObject( instance, opacket, startTick )
 {
-	instance.SerializeVariables(opacket, startTick);
+	function SerializeCallback( instance, opacket, startTick )
+	{
+		::print("SerializeCallback("+instance+", "+opacket+", "+startTick+")\n");
+		
+		instance.Serialize(opacket, startTick);
+	}
+	::SetSerializeCallback(this, SerializeCallback);
 }
 
 if(__client__)
-function OnCreateClientObject( type, id )
 {
-	::assert(type in ::ObjectTypes);
-	local c = ::ObjectTypes[type];
+	function ObjectCreationCallback( type, id, ipacket )
+	{
+		::print("ObjectCreationCallback("+type+", "+id+", "+ipacket+")\n");
+		
+		::assert(type in ::ObjectTypes);
+		local c = ::ObjectTypes[type];
+		
+		local i = c.Class.instance();
+		i.Handle = ::AddObject(type, id, i);
+		::print("AddObject(...) = "+i.Handle+"\n");
+		i.constructor();
+		::print("Constructed!\n");
+	}
+	::SetObjectCreationCallback(this, ObjectCreationCallback);
 	
-	local i = c.instance();
-	i.Id = id;
-	::AddObject(i);
-	i.constructor();
+	function ObjectUpdateCallback( instance, ipacket )
+	{
+		::print("ObjectUpdateCallback("+instance+", "+ipacket+")\n");
+		
+		instance.DeserializeVar(ipacket);
+	}
+	::SetObjectUpdateCallback(this, ObjectUpdateCallback);
 }

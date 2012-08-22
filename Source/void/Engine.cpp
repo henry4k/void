@@ -6,29 +6,25 @@
 #include <void/Engine.h>
 
 
-
-
-
 Engine::Engine() :
+	m_ResourceManager(),
 	m_Squirrel(),
 	m_CurrentTime(tools4k::RuntimeInSeconds()),
 	m_LastTime(0)
 {
-	InitializeResourceManager();
 }
 
 Engine::~Engine()
 {
-	TerminateResourceManager();
 }
 
-bool Engine::simulate()
+bool Engine::update()
 {
 	m_LastTime = m_CurrentTime;
 	m_CurrentTime = tools4k::RuntimeInSeconds();
 	double timeDelta = m_CurrentTime - m_LastTime;
 	
-	return onSimulate(timeDelta);
+	return onUpdate(timeDelta);
 }
 
 bool Engine::loadPackage( const char* name )

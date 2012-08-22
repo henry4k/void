@@ -89,8 +89,8 @@ bool Image::loadPngImage( const char* file )
 	png_get_IHDR(png_ptr, info_ptr, &twidth, &theight, &bit_depth, &color_type, NULL, NULL, NULL);
 
 	//update width and height based on png info
-	m_Width = int(twidth);
-	m_Height = int(theight);
+	m_Size.x = int(twidth);
+	m_Size.y = int(theight);
 
 	switch(color_type)
 	{
@@ -157,7 +157,7 @@ bool Image::loadPngImage( const char* file )
 }
 
 Image::Image() :
-	m_Width(0), m_Height(0),
+	m_Size(0, 0),
 	m_Bpp(0),
 	m_Format(0), m_Type(0),
 	m_Data(NULL)
@@ -217,8 +217,7 @@ bool Image::load( const char* file )
 /// ---- Texture ----
 
 Texture::Texture() :
-	m_Name(0),
-	m_Type(0)
+	m_Name(0)
 {
 }
 
@@ -236,7 +235,38 @@ void Texture::clear()
 	}
 }
 
-bool Texture::createTexture2d( int options, const Image* image )
+static const int MaxTextureLayers = 8;
+GLenum CurTextureTargets[MaxTextureLayers];
+
+int InitTextureLayers()
+{
+	for(int i = 0; i < 8; i++)
+		CurTextureTargets[i] = -1;
+	return 0;
+}
+
+void Texture::bind( int layer )
+{
+	static int unused = InitTextureLayers();
+	glActiveTexture(GL_TEXTURE0+layer);
+	GLenum t = type();
+	if((CurTextureTargets[layer] != -1) && (CurTextureTargets[layer] != t))
+	{
+		glBindTexture(CurTextureTargets[layer], 0);
+		CurTextureTargets[layer] = t;
+	}
+	glBindTexture(t, m_Name);
+}
+
+
+/// ---- Texture2d ----
+
+Texture2d::Texture2d() :
+	m_Size(0, 0)
+{
+}
+
+bool Texture2d::create( const Image* image, int options )
 {
 	clear();
 	
@@ -257,25 +287,28 @@ bool Texture::createTexture2d( int options, const Image* image )
 	if(options & TEX_MIPMAP)
 		glTexParameteri(GL_TEXTURE_2D, GL_GENERATE_MIPMAP, GL_TRUE);
 	
-	glTexImage2D(GL_TEXTURE_2D, 0, image->format(),  image->width(), image->height(), 0, image->format(), image->type(), image->data());
+	glTexImage2D(GL_TEXTURE_2D, 0, image->format(),  image->size().x, image->size().y, 0, image->format(), image->type(), image->data());
 	
-	glBindTexture(GL_TEXTURE_2D, 0); // unbind? .. warum?
+	glBindTexture(GL_TEXTURE_2D, 0); // TODO: unbind? .. warum?
 	CheckGl();
 	
 	m_Name = id;
-	m_Type = GL_TEXTURE_2D;
+	m_Size = image->size();
 	return true;
 }
 
-bool Texture::loadTexture2d( int options, const char* file )
+bool Texture2d::load( const char* file, int options )
 {
 	Image image;
 	if(!image.load(file))
 		return false;
-	return createTexture2d(options, &image);
+	return create(&image, options);
 }
 
-bool Texture::createCubeMap( int options, const Image* images )
+
+/// ---- TextureCubeMap ----
+
+bool TextureCubeMap::create( const Image* images, int options )
 {
 	clear();
 	
@@ -299,7 +332,7 @@ bool Texture::createCubeMap( int options, const Image* images )
 	for(int i = 0; i < 6; i++)
 	{
 		GLenum target = GL_TEXTURE_CUBE_MAP_POSITIVE_X+i;
-		glTexImage2D(target, 0, images[i].format(),  images[i].width(), images[i].height(), 0, images[i].format(), images[i].type(), images[i].data());
+		glTexImage2D(target, 0, images[i].format(),  images[i].size().x, images[i].size().y, 0, images[i].format(), images[i].type(), images[i].data());
 	}
 	
 	glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
@@ -307,11 +340,10 @@ bool Texture::createCubeMap( int options, const Image* images )
 	CheckGl();
 	
 	m_Name = id;
-	m_Type = GL_TEXTURE_CUBE_MAP;
 	return true;
 }
 
-bool Texture::loadCubeMap( int options, const char* path, const char* extension )
+bool TextureCubeMap::load( const char* path, const char* extension, int options )
 {
 	Image images[6];
 	static const char* names[6] = { "Right","Left","Bottom","Top","Front","Back" };
@@ -323,28 +355,7 @@ bool Texture::loadCubeMap( int options, const char* path, const char* extension 
 		if(!images[i].load(file.c_str()))
 			return false;
 	}
-	return createCubeMap(options, images);
+	return create(images, options);
 }
 
 
-static const int MaxTextureLayers = 8;
-GLenum CurTextureTargets[MaxTextureLayers];
-
-int InitTextureLayers()
-{
-	for(int i = 0; i < 8; i++)
-		CurTextureTargets[i] = -1;
-	return 0;
-}
-
-void Texture::bind( int layer )
-{
-	static int unused = InitTextureLayers();
-	glActiveTexture(GL_TEXTURE0+layer);
-	if((CurTextureTargets[layer] != -1) && (CurTextureTargets[layer] != m_Type))
-	{
-		glBindTexture(CurTextureTargets[layer], 0);
-		CurTextureTargets[layer] = m_Type;
-	}
-	glBindTexture(m_Type, m_Name);
-}

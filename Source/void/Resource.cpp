@@ -7,147 +7,99 @@
 #include <void/Resource.h>
 
 
-/// ---- ResourceType ----
-
-struct ResourceType
-{
-	Handle typeId;
-	ResourceAllocFn allocFn;
-};
-
-std::map<Handle,ResourceType> g_ResourceTypes;
-
-
-void RegisterResourceType_( Handle typeId, ResourceAllocFn allocFn )
-{
-	if(!allocFn)
-		Error("Invalid resource structure (id = %d)", typeId);
-	
-	ResourceType& rt = g_ResourceTypes[typeId];
-	rt.typeId = typeId;
-	rt.allocFn = allocFn;
-}
-
-const ResourceType* GetResourceType( Handle typeId )
-{
-	std::map<Handle,ResourceType>::const_iterator i = g_ResourceTypes.find(typeId);
-	if(i == g_ResourceTypes.end())
-		return NULL;
-	else
-		return &i->second;
-}
-
 
 /// ---- Resource ----
 
-struct ResourceInfo
+void Resource::release()
 {
-	Resource* data;
-	std::string filePath;
-	int references;
-	Handle typeId;
-};
-
-std::map<std::string,ResourceInfo*> g_ResourcesByPath;
-std::map<Resource*,  ResourceInfo*> g_ResourcesByData;
-
-
-std::string ResourceName( Handle typeId, const char* filePath )
-{
-	return filePath; // FIXME
+	// ... ?!!
 }
 
-Resource* CreateResource( Handle typeId, const char* filePath )
+std::string Resource::filePath() const
 {
-	const ResourceType* type = GetResourceType(typeId);
-	
-	ResourceInfo* res = new ResourceInfo;
-	res->data = type->allocFn();
-	res->filePath = filePath;
-	res->references = 1;
-	res->typeId = type->typeId;
-	
-	if(!res->data->load(filePath))
-	{
-		Log("Can't load resource '%s'", filePath);
-		delete res->data;
-		delete res;
-		return NULL;
-	}
-	
-	g_ResourcesByData[res->data] = res;
-	g_ResourcesByPath[filePath]  = res;
-	
-	return res->data;
+	return m_FilePath;
 }
 
-void RemoveResource( Resource* data )
+std::string Resource::name() const
 {
-	std::map<Resource*,ResourceInfo*>::iterator i = g_ResourcesByData.find(data);
-	if(i == g_ResourcesByData.end())
-		return;
-	
-	ResourceInfo* ri = i->second;
-	
-	g_ResourcesByPath.erase(ResourceName(ri->typeId, ri->filePath.c_str()));
-	g_ResourcesByData.erase(i);
-	
-	delete ri->data;
-	delete ri;
+	return Resource::Name(m_TypeId, m_FilePath.c_str());
 }
 
-Resource* LoadResource( Handle typeId, const char* filePath )
+std::string Resource::Name( int typeId, const char* filePath )
 {
-	std::map<std::string,ResourceInfo*>::const_iterator i = g_ResourcesByPath.find(ResourceName(typeId, filePath));
-	if(i != g_ResourcesByPath.end())
-	{
-		i->second->references++;
-		return i->second->data;
-	}
-	
-	return CreateResource(typeId, filePath);
-}
-
-void ReleaseResource( Resource* data )
-{
-	std::map<Resource*,ResourceInfo*>::const_iterator i = g_ResourcesByData.find(data);
-	if(i == g_ResourcesByData.end())
-	{
-		Log("Resource %p does not exist", data);
-		return;
-	}
-	
-	ResourceInfo* ri = i->second;
-	ri->references--;
-	if(ri->references <= 0)
-		RemoveResource(data);
+	return filePath;
 }
 
 
 
 /// ---- ResourceManager ----
 
-void InitializeResourceManager()
+ResourceManager::ResourceManager()
 {
-	// ...
 }
 
-void TerminateResourceManager()
+ResourceManager::~ResourceManager()
 {
+	std::map<std::string, Resource*>::const_iterator i = m_Resources.begin();
+	for(; i != m_Resources.end(); ++i)
 	{
-		std::map<Resource*,ResourceInfo*>::const_iterator i = g_ResourcesByData.begin();
-		for(; i != g_ResourcesByData.end(); i++)
-		{
-			ResourceInfo* ri = i->second;
-			delete ri->data;
-			delete ri;
-		}
-		
-		g_ResourcesByData.clear();
-		g_ResourcesByPath.clear();
+		delete i->second;
 	}
+}
+
+void ResourceManager::registerResourceType_( int typeId, ResourceAllocFn allocFn )
+{
+	assert(allocFn);
 	
+	ResourceType& rt = m_ResourceTypes[typeId];
+	rt.typeId = typeId;
+	rt.allocFn = allocFn;
+}
+
+const ResourceType* ResourceManager::getResourceType( int typeId ) const
+{
+	std::map<int, ResourceType>::const_iterator i = m_ResourceTypes.find(typeId);
+	if(i == m_ResourceTypes.end())
+		return NULL;
+	else
+		return &i->second;
+}
+
+Resource* ResourceManager::loadResource( int typeId, const char* filePath )
+{
+	std::map<std::string, Resource*>::iterator i = m_Resources.find(Resource::Name(typeId, filePath));
+	if(i != m_Resources.end())
 	{
-		g_ResourceTypes.clear();
+		++i->second->m_RefCount;
+		return i->second;
 	}
+	else
+	{
+		const ResourceType* type = getResourceType(typeId);
+		Resource* res = type->allocFn();
+		res->m_RefCount = 0;
+		res->m_TypeId = typeId;
+		res->m_FilePath = filePath;
+
+		if(!res->onLoad())
+		{
+			Error("Can't load resource '%s'", filePath);
+			delete res;
+			return NULL;
+		}
+
+		m_Resources[res->name()] = res;
+
+		return res;
+	}
+}
+
+void ResourceManager::releaseResource( Resource* res )
+{
+	--res->m_RefCount;
+	if(res->m_RefCount > 0)
+		return;
+	
+	m_Resources.erase(res->name());
+	delete res;
 }

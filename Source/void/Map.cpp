@@ -138,34 +138,34 @@ VoxelChunk* Map::createChunkAt( int chunkX, int chunkY, int chunkZ )
 	}
 }
 
-Voxel Map::getVoxel(int x, int y, int z) const
+Voxel Map::getVoxel( vec3i pos ) const
 {
-	int chunkX = x/VoxelChunkSize;
-	int chunkY = y/VoxelChunkSize;
-	int chunkZ = z/VoxelChunkSize;
+	int chunkX = pos.x/VoxelChunkSize;
+	int chunkY = pos.y/VoxelChunkSize;
+	int chunkZ = pos.z/VoxelChunkSize;
 	
 	VoxelChunk* chunk = getChunkAt(chunkX, chunkY, chunkZ);
 	if(!chunk)
 		return InvalidVoxel;
 	
-	int offX = x-chunkX;
-	int offY = y-chunkY;
-	int offZ = z-chunkZ;
+	int offX = pos.x-chunkX;
+	int offY = pos.y-chunkY;
+	int offZ = pos.z-chunkZ;
 	
 	return chunk->getVoxel(offX, offY, offZ);
 }
 
-void Map::setVoxel(int x, int y, int z, Voxel voxel)
+void Map::setVoxel( vec3i pos, Voxel voxel )
 {
-	int chunkX = x/VoxelChunkSize;
-	int chunkY = y/VoxelChunkSize;
-	int chunkZ = z/VoxelChunkSize;
+	int chunkX = pos.x/VoxelChunkSize;
+	int chunkY = pos.y/VoxelChunkSize;
+	int chunkZ = pos.z/VoxelChunkSize;
 	
 	VoxelChunk* chunk = createChunkAt(chunkX, chunkY, chunkZ);
 	
-	int offX = x-chunkX;
-	int offY = y-chunkY;
-	int offZ = z-chunkZ;
+	int offX = pos.x-chunkX;
+	int offY = pos.y-chunkY;
+	int offZ = pos.z-chunkZ;
 	
 	chunk->setVoxel(offX, offY, offZ, voxel);
 }

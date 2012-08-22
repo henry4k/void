@@ -7,18 +7,17 @@
 
 /// ----- Object ------
 
-Object::Object( ObjectId id, ObjectTypeId typeId, HSQOBJECT scriptObject, Squirrel* squirrel ) :
+Object::Object( ObjectId id, ObjectTypeId typeId, HSQOBJECT scriptObject ) :
 	m_Id(id),
 	m_TypeId(typeId),
-	m_ScriptObject(scriptObject),
-	m_Squirrel(squirrel)
+	m_ScriptObject(scriptObject)
 {
-	sq_addref(m_Squirrel->vm(), &m_ScriptObject);
+	sq_addref(Singleton<Squirrel>()->vm(), &m_ScriptObject);
 }
 
 Object::~Object()
 {
-	sq_release(m_Squirrel->vm(), &m_ScriptObject);
+	sq_release(Singleton<Squirrel>()->vm(), &m_ScriptObject);
 }
 
 ObjectId Object::id() const
@@ -36,6 +35,13 @@ HSQOBJECT Object::scriptObject() const
 	return m_ScriptObject;
 }
 
+Object* Object::GetHandle( int index )
+{
+	Object* p = NULL;
+	sq_getuserpointer(Singleton<Squirrel>()->vm(), index, (SQUserPointer*)&p);
+	return p;
+}
+
 
 
 /// ----- ObjectManager -----
@@ -43,11 +49,8 @@ HSQOBJECT Object::scriptObject() const
 SQInteger fn_ObjectGetId( HSQUIRRELVM vm );
 SQInteger fn_GetObjectById( HSQUIRRELVM vm );
 
-ObjectManager::ObjectManager( Squirrel* squirrel ) :
-	m_Squirrel(squirrel)
+ObjectManager::ObjectManager()
 {
-	m_Squirrel->registerFunction("ObjectGetId", fn_ObjectGetId, 2, ".p");
-	m_Squirrel->registerFunction("GetObjectById", fn_GetObjectById, 2, ".i");
 }
 
 ObjectManager::~ObjectManager()
@@ -103,16 +106,18 @@ SQInteger fn_ObjectGetId( HSQUIRRELVM vm ) // handle
 	sq_pushinteger(vm, p->id());
 	return 1;
 }
+RegisterSqFunction(ObjectGetId, fn_ObjectGetId, 2, ".p");
 
 SQInteger fn_GetObjectById( HSQUIRRELVM vm ) // id
 {
-// 	SQInteger id;
-// 	sq_getinteger(vm, 2, &id);
-// 	
-// 	Object* p = (Object*)GetObject(id);
-// 	if(!p)
-// 		return 0;
-// 	
-// 	sq_pushobject(vm, p->scriptObject);
+	SQInteger id;
+	sq_getinteger(vm, 2, &id);
+	
+	Object* p = Singleton<ObjectManager>()->getObject(id);
+	if(!p)
+		return 0;
+	
+	sq_pushobject(vm, p->scriptObject());
 	return 1;
 }
+RegisterSqFunction(GetObjectById, fn_GetObjectById, 2, ".i");

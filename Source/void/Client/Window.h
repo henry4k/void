@@ -4,6 +4,8 @@
 #include <tools4k/Vector.h>
 using tools4k::vec2i;
 
+#include <void/Singleton.h>
+
 
 class Window;
 
@@ -15,7 +17,7 @@ class IWindowEventListener
 		virtual void onKeyAction( Window* wnd, int key, int action ) = 0;
 };
 
-class Window
+class Window : public SingletonClass<Window>
 {
 	public:
 		Window( IWindowEventListener* eventListener, vec2i size );

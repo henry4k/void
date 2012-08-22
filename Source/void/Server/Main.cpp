@@ -15,17 +15,15 @@ class ServerEngine : public Engine
 		virtual ~ServerEngine();
 		
 	private:
-		bool onSimulate( double timeDelta );
+	bool onUpdate( double timeDelta );
 		
 		Server m_Server;
+		ServerObjectManager m_ObjectManager;
 		Map m_Map;
 };
 
 
-ServerEngine::ServerEngine() : 
-	Engine(),
-	m_Server(),
-	m_Map()
+ServerEngine::ServerEngine()
 {
 	// Setup Squirrel
 	m_Squirrel.setConst("__server__", 1);
@@ -34,6 +32,9 @@ ServerEngine::ServerEngine() :
 
 bool ServerEngine::initialize()
 {
+	if(!loadPackage("Base"))
+		return false;
+	
 	return true;
 }
 
@@ -41,9 +42,10 @@ ServerEngine::~ServerEngine()
 {
 }
 
-bool ServerEngine::onSimulate(double timeDelta)
+bool ServerEngine::onUpdate(double timeDelta)
 {
 	m_Server.service();
+	m_ObjectManager.update();
 	return true;
 }
 
@@ -54,7 +56,7 @@ int main( int argc, char* argv[] )
 	ServerEngine engine;
 	if(!engine.initialize())
 		return 0;
-	while(engine.simulate())
+	while(engine.update())
 		;
 	return 0; 
 }

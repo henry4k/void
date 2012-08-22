@@ -1,5 +1,6 @@
 #include <void/Common.h>
 #include <void/Packet.h>
+#include <void/Server/Object.h>
 #include <void/Server/Server.h>
 
 
@@ -27,39 +28,95 @@ Server::~Server()
 {
 }
 
+// int Server::getFreeSlot()
+// {
+// 	for(int i = 0; i < m_ClientInfos.size(); ++i)
+// 	{
+// 		if(!m_ClientInfos[i].isActive())
+// 			return i;
+// 	}
+// }
+
+void Server::sendClientList( int slot )
+{
+	OPacket p(StuffChannel, SM_ClientList, 0);
+	
+	for(int i = 0; i < m_ClientInfos.size(); ++i)
+	{
+		ClientInfo* ci = &m_ClientInfos[i];
+		if(!ci->isActive())
+			continue;
+		
+		p.write<Int32>("Slot", ci->slot());
+		p.write("Name", std::string(ci->name()));
+	}
+	
+	sendPacket(slot, &p);
+}
+
 void Server::service()
 {
 	ENetEvent event;
 	while(enet_host_service(m_Host, &event, NetworkServiceTimeout) > 0)
 	{
+		int slot = slotByPeer(event.peer);
+		ClientInfo* ci = clientInfoBySlot(slot);
+		
 		switch(event.type)
 		{
 			case ENET_EVENT_TYPE_CONNECT:
 			{
-				int slot = slotByPeer(event.peer);
-				
 				Log("New client %d connected from %x:%u.\n",
 					slot,
 					event.peer->address.host,
 					event.peer->address.port
 				);
 				
-				ClientInfo* ci = clientInfoBySlot(slot);
-				ci->activate(slot);
 				event.peer->data = ci;
-				
-				OPacket p(StuffChannel, 0, ENET_PACKET_FLAG_RELIABLE);
-				p.write("Text", "Hello client, I'm the server.");
-				p.write<Int32>("Number", 4000);
-				sendPacket(slot, &p);
+				assert(slot == ci->slot());
 			} break;
 			
 			case ENET_EVENT_TYPE_RECEIVE:
 			{
-				Log("Channel=%u [%s]\n",
-					event.channelID,
-					(const char*)event.packet->data
-				);
+				IPacket p(event.channelID, event.packet);
+				switch(p.messageId())
+				{
+					case CM_LoginRequest:
+					{
+						std::string name = p.readString("Name");
+						
+						// Broadcast SM_ClientConnected to all other clients
+						{
+							OPacket p(StuffChannel, SM_ClientConnected, 0);
+							p.write<Int32>("Slot", slot);
+							p.write("Name", name);
+							broadcastPacket(&p);
+						}
+						
+						// Activate it too, send SM_LoginResponse and SM_ClientList
+						ci->activate(name);
+						
+						{
+							OPacket p(StuffChannel, SM_LoginResponse, 0);
+							p.write<Int32>("Slot", slot);
+						}
+						
+						sendClientList(slot);
+						
+						Singleton<ServerObjectManager>()->onClientConnected(slot);
+					} break;
+					
+					default:
+					{
+						// Wenn sonst nix passt wirds ans Script geleitet
+						m_PacketCallback.prepareCall();
+						p.pushHandle();
+						m_PacketCallback.executeCall(1, false, true);
+						
+// 						Error("Got unknown network message");
+					}
+				}
+				
 				enet_packet_destroy(event.packet);
 			} break;
 			
@@ -67,8 +124,13 @@ void Server::service()
 			{
 				int slot = slotByPeer(event.peer);
 				Log("%d disconnected.\n", slot);
+				
 				clientInfoBySlot(slot)->reset();
 				event.peer->data = NULL;
+				
+				OPacket p(StuffChannel, SM_ClientDisconnected, 0);
+				p.write<Int32>("Slot", slot);
+				broadcastPacket(&p);
 			} break;
 			
 			default:
@@ -91,7 +153,13 @@ void Server::sendPacket( int clientSlot, OPacket* packet )
 
 void Server::broadcastPacket( OPacket* packet )
 {
-	enet_host_broadcast(m_Host, packet->channel(), packet->enetPacket());
+	for(int i = 0; i < m_ClientInfos.size(); ++i)
+	{
+		if(m_ClientInfos[i].isActive())
+			sendPacket(i, packet);
+	}
+	
+	// enet_host_broadcast(m_Host, packet->channel(), packet->enetPacket());
 	// enet_host_flush(m_Host);
 }
 
@@ -100,13 +168,22 @@ ENetPeer* Server::clientPeerBySlot( int slot )
 	return &m_Host->peers[slot];
 }
 
-// int Server::nextClientSlot( int i )
-// {
-// 	i = (i == InvalidSlot)?(0):(i+1);
-// 	for(; i < m_Host->peerCount; i++)
-// 	{
-// 		if(m_Host->peers[i].data)
-// 			return i;
-// 	}
-// 	return InvalidSlot;
-// }
+SQInteger fn_SendPacket( HSQUIRRELVM vm ) // client, packet
+{
+	SQInteger clientSlot;
+	sq_getinteger(vm, 2, &clientSlot);
+	OPacket* p = OPacket::GetHandle(3);
+	
+	Singleton<Server>()->sendPacket(clientSlot, p);
+	return 0;
+}
+RegisterSqFunction(SendPacket, fn_SendPacket, 3, ".ip");
+
+SQInteger fn_BroadcastPacket( HSQUIRRELVM vm ) // packet
+{
+	OPacket* p = OPacket::GetHandle(2);
+	
+	Singleton<Server>()->broadcastPacket(p);
+	return 0;
+}
+RegisterSqFunction(BroadcastPacket, fn_BroadcastPacket, 2, ".p");
